@@ -28,7 +28,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Force JSON response
       res.setHeader('Content-Type', 'application/json');
 
-      const result = await sendTestEmail("georgi.pepelyankov@gmail.com");
+      const email = req.query.email as string;
+      if (!email) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Email parameter is required" 
+        });
+      }
+
+      console.log(`Attempting to send test email to: ${email}`);
+      const result = await sendTestEmail(email);
 
       if (result.success) {
         res.json({ 

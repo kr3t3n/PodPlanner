@@ -1,0 +1,73 @@
+
+Creating SMTP transporter with config: {
+  host: 'smtp.dreamhost.com',
+  port: 587,
+  secure: false,
+  requireTLS: true,
+  auth: { user: 'noreply@podplanner.xyz' }
+}
+Verifying SMTP connection...
+5:20:57 PM [express] serving on port 5000
+SMTP connection verified successfully!
+SMTP service initialized successfully
+5:20:59 PM [express] GET /api/user 401 in 2ms
+5:21:01 PM [express] GET /api/user 401 in 78ms
+5:21:29 PM [express] GET /api/user 401 in 78ms
+Received forgot password request for email: georgi@duck.com
+Generating reset token for user: 1
+Sending password reset email with URL: http://a1bba429-47ee-4a92-81dd-9f75fef514c3-00-1kexenw2159zx.janeway.replit.dev/reset-password
+Attempting to send password reset email to: georgi@duck.com
+Attempting to send email to: georgi@duck.com
+Email sent successfully to: georgi@duck.com
+Password reset email sent successfully to: georgi@duck.com
+Password reset email sent successfully
+5:21:35 PM [express] POST /api/forgot-password 200 in 1651ms
+Attempting to send test email to: georgi.pepelyankov@gmail.com
+Email sent successfully: {
+  accepted: [ 'georgi.pepelyankov@gmail.com' ],
+  rejected: [],
+  ehlo: [
+    'PIPELINING',
+    'SIZE 40960000',
+    'ETRN',
+    'AUTH PLAIN LOGIN',
+    'AUTH=PLAIN LOGIN',
+    'ENHANCEDSTATUSCODES',
+    '8BITMIME',
+    'CHUNKING'
+  ],
+  envelopeTime: 253,
+  messageTime: 226,
+  messageSize: 751,
+  response: '250 2.0.0 Ok: queued as 4Ywt2Z1lyRz57',
+  envelope: {
+    from: 'noreply@podplanner.xyz',
+    to: [ 'georgi.pepelyankov@gmail.com' ]
+  },
+  messageId: '<5c267909-be59-9eeb-b3c7-2ac84bf1d78f@podplanner.xyz>'
+}
+5:24:54 PM [express] GET /api/test-email 200 in 1387ms :: {"success":true,"message":"Test email sent…
+Attempting to send test email to: georgi.pepelyankov@gmail.com
+Email sent successfully: {
+  accepted: [ 'georgi.pepelyankov@gmail.com' ],
+  rejected: [],
+  ehlo: [
+    'PIPELINING',
+    'SIZE 40960000',
+    'ETRN',
+    'AUTH PLAIN LOGIN',
+    'AUTH=PLAIN LOGIN',
+    'ENHANCEDSTATUSCODES',
+    '8BITMIME',
+    'CHUNKING'
+  ],
+  envelopeTime: 253,
+  messageTime: 217,
+  messageSize: 751,
+  response: '250 2.0.0 Ok: queued as 4Ywt2d6TDcz57',
+  envelope: {
+    from: 'noreply@podplanner.xyz',
+    to: [ 'georgi.pepelyankov@gmail.com' ]
+  },
+  messageId: '<896dc606-8e97-fafa-1595-d44ac776102a@podplanner.xyz>'
+}
