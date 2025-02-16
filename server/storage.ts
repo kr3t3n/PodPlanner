@@ -129,7 +129,12 @@ export class DatabaseStorage implements IStorage {
   async createEpisode(insertEpisode: InsertEpisode): Promise<Episode> {
     const [episode] = await db
       .insert(episodes)
-      .values(insertEpisode)
+      .values({
+        ...insertEpisode,
+        date: new Date(insertEpisode.date), // Convert string date to Date object
+        status: insertEpisode.status || "draft",
+        repeatPattern: insertEpisode.repeatPattern || null,
+      })
       .returning();
     return episode;
   }
