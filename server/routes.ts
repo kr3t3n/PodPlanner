@@ -466,6 +466,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generate invite code for a group
+  app.post("/api/groups/:id/invite-codes", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const groupId = parseInt(req.params.id);
+
+    // Check if user is admin
+    const members = await storage.getGroupMembers(groupId);
+    const isAdmin = members.some(m => m.userId === req.user!.id && m.isAdmin);
+    if (!isAdmin) return res.sendStatus(403);
+
+    // Generate a random 8-character code
+    const code = randomBytes(4).toString('hex');
+
+    const inviteCode = await storage.createGroupInviteCode({
+      groupId,
+      code,
+      createdBy: req.user.id,
+      expiresAt: addDays(new Date(), 7), // Code expires in 7 days
+      used: false,
+    });
+
+    res.json(inviteCode);
+  });
+
+  // Join group with invite code
+  app.post("/api/join-group", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const { code } = req.body;
+    if (!code) {
+      return res.status(400).json({ message: "Invite code is required" });
+    }
+
+    const inviteCode = await storage.getValidGroupInviteCode(code);
+    if (!inviteCode) {
+      return res.status(400).json({ message: "Invalid or expired invite code" });
+    }
+
+    // Check if user is already a member
+    const members = await storage.getGroupMembers(inviteCode.groupId);
+    if (members.some(m => m.userId === req.user!.id)) {
+      return res.status(400).json({ message: "You are already a member of this group" });
+    }
+
+    // Add user to group
+    await storage.addGroupMember({
+      userId: req.user.id,
+      groupId: inviteCode.groupId,
+      isAdmin: false,
+    });
+
+    // Mark code as used
+    await storage.markGroupInviteCodeAsUsed(inviteCode.id);
+
+    res.json(inviteCode.group);
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

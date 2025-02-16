@@ -76,6 +76,15 @@ export const episodeTopics = pgTable("episode_topics", {
   uniqEpisodeTopic: unique().on(table.episodeId, table.topicId),
 }));
 
+export const groupInviteCodes = pgTable("group_invite_codes", {
+  id: serial("id").primaryKey(),
+  groupId: integer("group_id").notNull().references(() => groups.id),
+  code: text("code").notNull(),
+  createdBy: integer("created_by").notNull().references(() => users.id),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").notNull().default(false),
+});
+
 export const insertUserSchema = createInsertSchema(users).extend({
   email: z.string().email("Invalid email address"),
 });
@@ -118,6 +127,10 @@ export type TopicComment = typeof topicComments.$inferSelect;
 export const insertEpisodeTopicSchema = createInsertSchema(episodeTopics);
 export type InsertEpisodeTopic = z.infer<typeof insertEpisodeTopicSchema>;
 export type EpisodeTopic = typeof episodeTopics.$inferSelect;
+
+export const insertGroupInviteCodeSchema = createInsertSchema(groupInviteCodes);
+export type InsertGroupInviteCode = z.infer<typeof insertGroupInviteCodeSchema>;
+export type GroupInviteCode = typeof groupInviteCodes.$inferSelect;
 
 export const episodeStatuses = ["draft", "planned", "done", "deleted"] as const;
 export type EpisodeStatus = typeof episodeStatuses[number];

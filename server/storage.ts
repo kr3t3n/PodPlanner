@@ -16,6 +16,8 @@ import {
   type InsertPasswordResetToken,
   type GroupInvitation,
   type InsertGroupInvitation,
+  type GroupInviteCode,
+  type InsertGroupInviteCode,
   users,
   groups,
   groupMembers,
@@ -25,6 +27,7 @@ import {
   episodeTopics,
   passwordResetTokens,
   groupInvitations,
+  groupInviteCodes,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, ne, gt } from "drizzle-orm";
@@ -72,6 +75,11 @@ export interface IStorage {
   createGroupInvitation(invitation: InsertGroupInvitation): Promise<GroupInvitation>;
   getValidGroupInvitation(token: string): Promise<(GroupInvitation & { group: Group }) | undefined>;
   markGroupInvitationAsUsed(id: number): Promise<void>;
+
+  // Add new methods for invite codes
+  createGroupInviteCode(code: InsertGroupInviteCode): Promise<GroupInviteCode>;
+  getValidGroupInviteCode(code: string): Promise<(GroupInviteCode & { group: Group }) | undefined>;
+  markGroupInviteCodeAsUsed(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -429,6 +437,45 @@ export class DatabaseStorage implements IStorage {
       .update(groupInvitations)
       .set({ used: true })
       .where(eq(groupInvitations.id, id));
+  }
+
+  async createGroupInviteCode(insertCode: InsertGroupInviteCode): Promise<GroupInviteCode> {
+    const [inviteCode] = await db
+      .insert(groupInviteCodes)
+      .values(insertCode)
+      .returning();
+    return inviteCode;
+  }
+
+  async getValidGroupInviteCode(code: string): Promise<(GroupInviteCode & { group: Group }) | undefined> {
+    const [inviteCode] = await db
+      .select({
+        id: groupInviteCodes.id,
+        groupId: groupInviteCodes.groupId,
+        code: groupInviteCodes.code,
+        createdBy: groupInviteCodes.createdBy,
+        expiresAt: groupInviteCodes.expiresAt,
+        used: groupInviteCodes.used,
+        group: groups,
+      })
+      .from(groupInviteCodes)
+      .innerJoin(groups, eq(groups.id, groupInviteCodes.groupId))
+      .where(
+        and(
+          eq(groupInviteCodes.code, code),
+          eq(groupInviteCodes.used, false),
+          gt(groupInviteCodes.expiresAt, new Date())
+        )
+      );
+
+    return inviteCode;
+  }
+
+  async markGroupInviteCodeAsUsed(id: number): Promise<void> {
+    await db
+      .update(groupInviteCodes)
+      .set({ used: true })
+      .where(eq(groupInviteCodes.id, id));
   }
 }
 

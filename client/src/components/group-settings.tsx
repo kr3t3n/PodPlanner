@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertGroupSchema, Group, GroupMember, User } from "@shared/schema";
-import { Loader2, UserPlus, Shield, UserMinus, Pencil } from "lucide-react";
+import { Loader2, UserPlus, Shield, UserMinus, Pencil, Link } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -31,6 +31,8 @@ export function GroupSettings({ groupId }: { groupId?: number }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [isInviteCodeDialogOpen, setIsInviteCodeDialogOpen] = useState(false);
+  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -41,6 +43,28 @@ export function GroupSettings({ groupId }: { groupId?: number }) {
     resolver: zodResolver(z.object({
       email: z.string().email("Invalid email address"),
     })),
+  });
+
+  const generateInviteCodeMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/groups/${groupId}/invite-codes`);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setGeneratedCode(data.code);
+      setIsInviteCodeDialogOpen(true);
+      toast({
+        title: "Invite code generated",
+        description: "Share this code with others to let them join the group",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to generate invite code",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const inviteMutation = useMutation({
@@ -310,7 +334,50 @@ export function GroupSettings({ groupId }: { groupId?: number }) {
       </ScrollArea>
 
       {isAdmin && (
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          <Dialog open={isInviteCodeDialogOpen} onOpenChange={setIsInviteCodeDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Invite Code Generated</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="p-4 bg-muted rounded-lg text-center">
+                  <code className="text-lg font-mono">{generatedCode}</code>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Share this code with others to let them join the group. The code will expire in 7 days.
+                </p>
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    if (generatedCode) {
+                      navigator.clipboard.writeText(generatedCode);
+                      toast({
+                        title: "Copied to clipboard",
+                        description: "The invite code has been copied to your clipboard",
+                      });
+                    }
+                  }}
+                >
+                  Copy to Clipboard
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Button
+            variant="outline"
+            onClick={() => generateInviteCodeMutation.mutate()}
+            disabled={generateInviteCodeMutation.isPending}
+          >
+            {generateInviteCodeMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Link className="h-4 w-4 mr-2" />
+            )}
+            Generate Invite Code
+          </Button>
+
           <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
             <DialogTrigger asChild>
               <Button>
