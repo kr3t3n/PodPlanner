@@ -33,6 +33,7 @@ export function GroupSettings({ groupId }: { groupId?: number }) {
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [isInviteCodeDialogOpen, setIsInviteCodeDialogOpen] = useState(false);
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
+  const [inviteCode, setInviteCode] = useState<string | null>(null); // Added state variable
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -74,9 +75,12 @@ export function GroupSettings({ groupId }: { groupId?: number }) {
       const res = await apiRequest("POST", `/api/groups/${groupId}/invite`, data);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => { // Updated onSuccess callback
       setIsInviteDialogOpen(false);
       inviteForm.reset();
+      // Set the code from the response and show the code dialog
+      setGeneratedCode(data.code);
+      setIsInviteCodeDialogOpen(true);
       toast({
         title: "Invitation sent",
         description: "An invitation email has been sent to the user",
