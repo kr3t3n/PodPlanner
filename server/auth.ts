@@ -33,6 +33,7 @@ export function setupAuth(app: Express) {
     throw new Error("SESSION_SECRET must be set");
   }
 
+  const isProduction = process.env.NODE_ENV === "production";
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET,
     resave: false,
@@ -40,10 +41,16 @@ export function setupAuth(app: Express) {
     store: storage.sessionStore,
     cookie: {
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-      secure: process.env.NODE_ENV === "production",
+      secure: isProduction, // Use secure cookies in production
+      sameSite: isProduction ? 'strict' : 'lax',
+      domain: isProduction ? '.podplanner.xyz' : undefined,
+      httpOnly: true,
+      path: '/'
     },
     name: 'podplanner.sid' // Custom session cookie name to avoid conflicts
   };
+
+  app.set('trust proxy', 1); // trust first proxy
 
   app.use(session(sessionSettings));
   app.use(passport.initialize());
