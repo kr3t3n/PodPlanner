@@ -72,13 +72,11 @@ export const insertTopicSchema = createInsertSchema(topics).extend({
   name: z.string().min(1, "Name is required").optional(),
   url: z.string().url("Must be a valid URL").optional(),
 }).refine((data) => {
-  // Either name or URL must be provided
-  if (!data.name && !data.url) {
-    return false;
-  }
-  return true;
+  // At least one field must be provided
+  return data.name !== undefined || data.url !== undefined;
 }, {
   message: "Either name or URL must be provided",
+  path: ["name"], // Show error on the name field
 });
 export type InsertTopic = z.infer<typeof insertTopicSchema>;
 export type Topic = typeof topics.$inferSelect;

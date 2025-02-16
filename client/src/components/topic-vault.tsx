@@ -61,6 +61,10 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
       console.log("Creating topic with payload:", payload);
 
       const res = await apiRequest("POST", `/api/groups/${groupId}/topics`, payload);
+      if (!res.ok) {
+        const error = await res.text();
+        throw new Error(error);
+      }
       return await res.json();
     },
     onSuccess: () => {
@@ -68,8 +72,8 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
       setIsDialogOpen(false);
       form.reset();
       toast({
-        title: "Topic created",
-        description: "Your topic has been added to the vault",
+        title: "Success",
+        description: "Topic created successfully",
       });
     },
     onError: (error: Error) => {
@@ -161,7 +165,7 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
               <Form {...form}>
                 <form
                   onSubmit={form.handleSubmit((data) => {
-                    console.log("Form submitted:", data);
+                    console.log("Form submitted with data:", data);
                     createTopicMutation.mutate(data);
                   })}
                   className="space-y-4"
@@ -186,7 +190,14 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
                       <FormItem>
                         <FormLabel>Reference URL (optional if name provided)</FormLabel>
                         <FormControl>
-                          <Input {...field} type="url" placeholder="https://..." />
+                          <Input 
+                            {...field} 
+                            type="url" 
+                            placeholder="https://..."
+                            onChange={(e) => {
+                              field.onChange(e.target.value || undefined);
+                            }}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
