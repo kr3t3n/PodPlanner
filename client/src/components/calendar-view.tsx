@@ -9,12 +9,20 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Episode } from "@shared/schema";
+import { Episode, episodeStatuses, type EpisodeStatus } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 
 export function CalendarView({ groupId }: { groupId: number | null }) {
   const [selected, setSelected] = useState<Date>();
@@ -28,12 +36,13 @@ export function CalendarView({ groupId }: { groupId: number | null }) {
   });
 
   const createEpisodeMutation = useMutation({
-    mutationFn: async (data: { title: string; date: Date }) => {
+    mutationFn: async (data: { title?: string; date: Date }) => {
+      const title = data.title || format(data.date, "MMM d, yyyy (EEEE)");
       const res = await apiRequest(
         "POST",
         `/api/groups/${groupId}/episodes`,
         {
-          title: data.title,
+          title,
           groupId,
           date: data.date.toISOString(),
           status: "draft"
@@ -53,13 +62,18 @@ export function CalendarView({ groupId }: { groupId: number | null }) {
   });
 
   const updateEpisodeMutation = useMutation({
-    mutationFn: async (data: { id: number; title: string; date: Date }) => {
+    mutationFn: async (data: { 
+      id: number; 
+      title?: string; 
+      date?: Date;
+      status?: EpisodeStatus;
+    }) => {
       const res = await apiRequest(
         "PATCH",
         `/api/episodes/${data.id}`,
         {
-          title: data.title,
-          date: data.date.toISOString(),
+          ...data,
+          date: data.date?.toISOString(),
         }
       );
       return res.json();
@@ -78,13 +92,17 @@ export function CalendarView({ groupId }: { groupId: number | null }) {
 
   const deleteEpisodeMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/episodes/${id}`);
+      await apiRequest(
+        "PATCH",
+        `/api/episodes/${id}`,
+        { status: "deleted" }
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/groups/${groupId}/episodes`] });
       toast({
         title: "Success",
-        description: "Episode deleted successfully",
+        description: "Episode moved to deleted status",
       });
     },
   });
@@ -106,15 +124,18 @@ export function CalendarView({ groupId }: { groupId: number | null }) {
     const form = e.target as HTMLFormElement;
     const title = (form.elements.namedItem("title") as HTMLInputElement).value;
 
-    if (selected && title) {
+    if (selected) {
       if (editingEpisode) {
         updateEpisodeMutation.mutate({
           id: editingEpisode.id,
-          title,
+          title: title || undefined,
           date: selected,
         });
       } else {
-        createEpisodeMutation.mutate({ title, date: selected });
+        createEpisodeMutation.mutate({ 
+          title: title || undefined,
+          date: selected
+        });
       }
     }
   };
@@ -144,11 +165,11 @@ export function CalendarView({ groupId }: { groupId: number | null }) {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="title">Episode Title</Label>
+                <Label htmlFor="title">Episode Title (Optional)</Label>
                 <Input 
                   id="title" 
-                  name="title" 
-                  required 
+                  name="title"
+                  placeholder={selected ? format(selected, "MMM d, yyyy (EEEE)") : ""}
                   defaultValue={editingEpisode?.title ?? ""}
                 />
               </div>
@@ -196,8 +217,30 @@ export function CalendarView({ groupId }: { groupId: number | null }) {
             <div>
               <h3 className="font-medium">{episode.title}</h3>
               <p className="text-sm text-muted-foreground">
-                {new Date(episode.date).toLocaleDateString()}
+                {format(new Date(episode.date), "PPP")}
               </p>
+              <div className="mt-1">
+                <Select
+                  value={episode.status}
+                  onValueChange={(value: EpisodeStatus) =>
+                    updateEpisodeMutation.mutate({
+                      id: episode.id,
+                      status: value,
+                    })
+                  }
+                >
+                  <SelectTrigger className="w-[120px] h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {episodeStatuses.filter(s => s !== "deleted").map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <Button 

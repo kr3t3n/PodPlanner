@@ -19,7 +19,7 @@ import {
   topicComments,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and, not } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -38,7 +38,7 @@ export interface IStorage {
   getGroupMembers(groupId: number): Promise<(GroupMember & { user: User })[]>;
   createEpisode(episode: InsertEpisode): Promise<Episode>;
   updateEpisode(id: number, episode: Partial<InsertEpisode>): Promise<Episode>;
-  deleteEpisode(id: number): Promise<void>;
+  deleteEpisode(id: number): Promise<Episode>;
   getGroupEpisodes(groupId: number): Promise<Episode[]>;
   createTopic(topic: InsertTopic): Promise<Topic>;
   getGroupTopics(groupId: number): Promise<Topic[]>;
@@ -153,15 +153,25 @@ export class DatabaseStorage implements IStorage {
     return episode;
   }
 
-  async deleteEpisode(id: number): Promise<void> {
-    await db.delete(episodes).where(eq(episodes.id, id));
+  async deleteEpisode(id: number): Promise<Episode> {
+    const [episode] = await db
+      .update(episodes)
+      .set({ status: "deleted" })
+      .where(eq(episodes.id, id))
+      .returning();
+    return episode;
   }
 
   async getGroupEpisodes(groupId: number): Promise<Episode[]> {
     return await db
       .select()
       .from(episodes)
-      .where(eq(episodes.groupId, groupId));
+      .where(
+        and(
+          eq(episodes.groupId, groupId),
+          not(eq(episodes.status, "deleted")) // Don't show deleted episodes
+        )
+      );
   }
 
   async createTopic(insertTopic: InsertTopic): Promise<Topic> {

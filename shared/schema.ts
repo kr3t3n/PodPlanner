@@ -79,3 +79,6 @@ export type TopicComment = typeof topicComments.$inferSelect;
 export const insertEpisodeTopicSchema = createInsertSchema(episodeTopics);
 export type InsertEpisodeTopic = z.infer<typeof insertEpisodeTopicSchema>;
 export type EpisodeTopic = typeof episodeTopics.$inferSelect;
+
+export const episodeStatuses = ["draft", "planned", "done", "deleted"] as const;
+export type EpisodeStatus = typeof episodeStatuses[number];
