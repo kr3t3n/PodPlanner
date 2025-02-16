@@ -60,18 +60,8 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
 
       console.log("Creating topic with payload:", payload);
 
-      const res = await apiRequest(
-        "POST",
-        `/api/groups/${groupId}/topics`,
-        payload
-      );
-
-      if (!res.ok) {
-        const error = await res.text();
-        throw new Error(error);
-      }
-
-      return res.json();
+      const res = await apiRequest("POST", `/api/groups/${groupId}/topics`, payload);
+      return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/groups/${groupId}/topics`] });
@@ -140,11 +130,6 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
     );
   }
 
-  const onSubmit = async (data: TopicFormData) => {
-    console.log("Form submitted with data:", data);
-    await createTopicMutation.mutateAsync(data);
-  };
-
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -157,17 +142,28 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
             {showArchived ? "Show Active" : "Show Archived"}
             <Archive className="ml-2 h-4 w-4" />
           </Button>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog 
+            open={isDialogOpen} 
+            onOpenChange={(open) => {
+              setIsDialogOpen(open);
+              if (!open) {
+                form.reset();
+              }
+            }}
+          >
             <DialogTrigger asChild>
               <Button>New Topic</Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add New Topic</DialogTitle>
+                <DialogTitle>✨ Add New Topic</DialogTitle>
               </DialogHeader>
               <Form {...form}>
                 <form
-                  onSubmit={form.handleSubmit(onSubmit)}
+                  onSubmit={form.handleSubmit((data) => {
+                    console.log("Form submitted:", data);
+                    createTopicMutation.mutate(data);
+                  })}
                   className="space-y-4"
                 >
                   <FormField
