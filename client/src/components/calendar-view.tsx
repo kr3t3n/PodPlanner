@@ -29,7 +29,10 @@ export function CalendarView({ groupId }: { groupId: number | null }) {
       const res = await apiRequest(
         "POST",
         `/api/groups/${groupId}/episodes`,
-        data
+        {
+          ...data,
+          date: data.date.toISOString(), // Convert date to ISO string
+        }
       );
       return res.json();
     },
