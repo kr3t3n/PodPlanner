@@ -50,7 +50,7 @@ export default function HomePage() {
   const { user, logoutMutation } = useAuth();
   const [selectedGroup, setSelectedGroup] = useState<number | null>(null);
   const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false); //Added for Create Group Dialog
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
   // Get invite code from URL if present
@@ -99,11 +99,31 @@ export default function HomePage() {
     queryKey: ["/api/groups"],
   });
 
+  // Store the selected group ID in localStorage
   useEffect(() => {
-    if (groups && groups.length > 0 && selectedGroup === null) {
-      setSelectedGroup(groups[0].id);
+    if (selectedGroup !== null) {
+      localStorage.setItem('selectedGroupId', selectedGroup.toString());
     }
-  }, [groups, selectedGroup]);
+  }, [selectedGroup]);
+
+  // Initialize selectedGroup from localStorage or first group
+  useEffect(() => {
+    if (groups?.length) {
+      const savedGroupId = localStorage.getItem('selectedGroupId');
+      if (savedGroupId) {
+        // Check if the saved group still exists in the user's groups
+        const groupExists = groups.some(g => g.id === parseInt(savedGroupId));
+        if (groupExists) {
+          setSelectedGroup(parseInt(savedGroupId));
+          return;
+        }
+      }
+      // If no saved group or it doesn't exist anymore, use the first group
+      setSelectedGroup(groups[0].id);
+    } else {
+      setSelectedGroup(null);
+    }
+  }, [groups]);
 
   if (isGroupsLoading) {
     return (
@@ -112,6 +132,11 @@ export default function HomePage() {
       </div>
     );
   }
+
+  const handleCreateGroup = () => {
+    setSelectedGroup(null);
+    setIsDialogOpen(true);
+  };
 
   return (
     <main className="container mx-auto px-4 py-8">
@@ -132,7 +157,7 @@ export default function HomePage() {
                 <DialogHeader>
                   <DialogTitle>Create Group</DialogTitle>
                 </DialogHeader>
-                {/* Add Create Group Form Here */}
+                <GroupSettings />
               </DialogContent>
             </Dialog>
             <Dialog open={isJoinDialogOpen} onOpenChange={setIsJoinDialogOpen}>
@@ -200,12 +225,19 @@ export default function HomePage() {
                 ))}
               </SelectContent>
             </Select>
-            <Button
-              variant="outline"
-              onClick={() => setSelectedGroup(null)}
-            >
-              Create New Group
-            </Button>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" onClick={handleCreateGroup}>
+                  Create New Group
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create New Group</DialogTitle>
+                </DialogHeader>
+                <GroupSettings />
+              </DialogContent>
+            </Dialog>
             <Dialog open={isJoinDialogOpen} onOpenChange={setIsJoinDialogOpen}>
               <Button variant="outline" onClick={() => setIsJoinDialogOpen(true)}>
                 Join Group
