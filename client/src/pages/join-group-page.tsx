@@ -65,7 +65,9 @@ export default function JoinGroupPage() {
         setInvitedEmail(data.email);
 
         if (data.requiresLogin) {
-          setLocation(`/auth?redirect=/join-group?token=${token}`);
+          // Encode the token to prevent URL parsing issues
+          const encodedToken = encodeURIComponent(token);
+          setLocation(`/auth?redirect=/join-group?token=${encodedToken}`);
           return;
         }
 
@@ -83,30 +85,31 @@ export default function JoinGroupPage() {
       }
     };
 
-    const acceptInvitation = async () => {
-      try {
-        setIsLoading(true);
-        const response = await apiRequest("POST", "/api/accept-invitation", { token });
-
-        if (!response.ok) {
-          const data = await response.json();
-          if (data.requiresLogin) {
-            setLocation(`/auth?redirect=/join-group?token=${token}`);
-            return;
-          }
-          throw new Error(data.message || "Failed to join group");
-        }
-
-        setLocation("/"); // Success - redirect to home
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to join group");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     checkInvitation();
   }, [token, user]);
+
+  const acceptInvitation = async () => {
+    try {
+      setIsLoading(true);
+      const response = await apiRequest("POST", "/api/accept-invitation", { token });
+
+      if (!response.ok) {
+        const data = await response.json();
+        if (data.requiresLogin) {
+          const encodedToken = encodeURIComponent(token);
+          setLocation(`/auth?redirect=/join-group?token=${encodedToken}`);
+          return;
+        }
+        throw new Error(data.message || "Failed to join group");
+      }
+
+      setLocation("/"); // Success - redirect to home
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to join group");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const onSubmit = async (values: z.infer<typeof registrationSchema>) => {
     if (!token) return;
@@ -140,6 +143,14 @@ export default function JoinGroupPage() {
       <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
         <h1 className="text-2xl font-bold text-destructive">{error}</h1>
         <Button onClick={() => setLocation("/")}>Go to Home</Button>
+      </div>
+    );
+  }
+
+  if (isLoading && !requiresRegistration) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }

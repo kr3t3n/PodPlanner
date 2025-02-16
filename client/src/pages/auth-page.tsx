@@ -21,7 +21,7 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertUserSchema } from "@shared/schema";
-import { Redirect } from "wouter";
+import { Redirect, useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { z } from "zod";
@@ -31,6 +31,7 @@ const forgotPasswordSchema = z.object({
 });
 
 export default function AuthPage() {
+  const [, setLocation] = useLocation();
   const { user, loginMutation, registerMutation, forgotPasswordMutation } = useAuth();
   const [showForgotPassword, setShowForgotPassword] = useState(false);
 
@@ -58,8 +59,21 @@ export default function AuthPage() {
     },
   });
 
+  // Get redirect URL from query params
+  const searchParams = new URLSearchParams(window.location.search);
+  const redirect = searchParams.get("redirect");
+
+  // After successful login/register, redirect to the specified URL or home
+  const onAuthSuccess = () => {
+    if (redirect) {
+      setLocation(redirect);
+    } else {
+      setLocation("/");
+    }
+  };
+
   if (user) {
-    return <Redirect to="/" />;
+    return <Redirect to={redirect || "/"} />;
   }
 
   return (
@@ -81,9 +95,10 @@ export default function AuthPage() {
               <TabsContent value="login">
                 <Form {...loginForm}>
                   <form
-                    onSubmit={loginForm.handleSubmit((data) =>
-                      loginMutation.mutate(data)
-                    )}
+                    onSubmit={loginForm.handleSubmit(async (data) => {
+                      await loginMutation.mutateAsync(data);
+                      onAuthSuccess();
+                    })}
                     className="space-y-4"
                   >
                     <FormField
@@ -93,7 +108,7 @@ export default function AuthPage() {
                         <FormItem>
                           <FormLabel>Username</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input {...field} autoComplete="username" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -106,7 +121,11 @@ export default function AuthPage() {
                         <FormItem>
                           <FormLabel>Password</FormLabel>
                           <FormControl>
-                            <Input type="password" {...field} />
+                            <Input 
+                              type="password" 
+                              {...field} 
+                              autoComplete="current-password"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -137,9 +156,10 @@ export default function AuthPage() {
               <TabsContent value="register">
                 <Form {...registerForm}>
                   <form
-                    onSubmit={registerForm.handleSubmit((data) =>
-                      registerMutation.mutate(data)
-                    )}
+                    onSubmit={registerForm.handleSubmit(async (data) => {
+                      await registerMutation.mutateAsync(data);
+                      onAuthSuccess();
+                    })}
                     className="space-y-4"
                   >
                     <FormField
@@ -149,7 +169,7 @@ export default function AuthPage() {
                         <FormItem>
                           <FormLabel>Username</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input {...field} autoComplete="username" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -162,7 +182,11 @@ export default function AuthPage() {
                         <FormItem>
                           <FormLabel>Email</FormLabel>
                           <FormControl>
-                            <Input type="email" {...field} />
+                            <Input 
+                              type="email" 
+                              {...field} 
+                              autoComplete="email"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -175,7 +199,11 @@ export default function AuthPage() {
                         <FormItem>
                           <FormLabel>Password</FormLabel>
                           <FormControl>
-                            <Input type="password" {...field} />
+                            <Input 
+                              type="password" 
+                              {...field} 
+                              autoComplete="new-password"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -256,7 +284,11 @@ export default function AuthPage() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" {...field} />
+                      <Input 
+                        type="email" 
+                        {...field} 
+                        autoComplete="email"
+                      />
                     </FormControl>
                     <FormDescription>
                       Enter your email address and we'll send you a link to reset your password.
