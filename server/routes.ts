@@ -121,16 +121,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/reset-password", async (req, res) => {
-    const { token, password } = req.body;
-    const resetToken = await storage.getValidPasswordResetToken(token);
-    if (!resetToken) {
-      return res.status(400).send("Invalid or expired token");
-    }
+    try {
+      const { token, password } = req.body;
+      const resetToken = await storage.getValidPasswordResetToken(token);
+      if (!resetToken) {
+        return res.status(400).json({ message: "Invalid or expired token" });
+      }
 
-    // Update password and mark token as used
-    await storage.updateUser(resetToken.userId, { password });
-    await storage.markPasswordResetTokenAsUsed(resetToken.id);
-    res.sendStatus(200);
+      // Hash the new password before storing
+      const hashedPassword = await hashPassword(password);
+
+      // Update password and mark token as used
+      await storage.updateUser(resetToken.userId, { password: hashedPassword });
+      await storage.markPasswordResetTokenAsUsed(resetToken.id);
+
+      res.status(200).json({ message: "Password updated successfully" });
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      res.status(500).json({ message: "Failed to reset password" });
+    }
   });
 
   app.post("/api/groups/:id/invite", async (req, res) => {
