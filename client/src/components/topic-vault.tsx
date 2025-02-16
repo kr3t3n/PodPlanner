@@ -29,7 +29,7 @@ import { z } from "zod";
 // Create a custom schema without groupId for the form
 const topicFormSchema = z.object({
   name: z.string().optional(),
-  url: z.string().url("Must be a valid URL").optional(),
+  url: z.string().url("Must be a valid URL").optional().or(z.literal("")),
 }).refine((data) => data.name || data.url, {
   message: "Either name or URL must be provided",
 });
@@ -68,7 +68,10 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
         const res = await apiRequest("POST", `/api/groups/${groupId}/topics`, {
           ...data,
           groupId,
-          url: data.url || undefined, // Only send URL if it's not empty
+          // If no name is provided but URL is, use the URL as the name
+          name: data.name || data.url || "",
+          // Only send URL if it's not empty
+          url: data.url || undefined,
         });
 
         console.log("3. API response status:", res.status);
@@ -198,15 +201,17 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
                 <div>
                   <h3 className="font-medium">{topic.name}</h3>
                   {topic.url && (
-                    <a
-                      href={topic.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-500 hover:underline flex items-center gap-1"
-                    >
-                      <Link className="h-4 w-4" />
-                      Reference Link
-                    </a>
+                    <div className="flex flex-col gap-1">
+                      <a
+                        href={topic.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-500 hover:underline flex items-center gap-1"
+                      >
+                        <Link className="h-4 w-4" />
+                        {topic.url}
+                      </a>
+                    </div>
                   )}
                 </div>
               </div>
