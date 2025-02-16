@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation, useRoute, useRouter } from "wouter";
+import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -24,13 +24,11 @@ const registrationSchema = z.object({
 
 export default function JoinGroupPage() {
   const [, setLocation] = useLocation();
-  const [, params] = useRoute("/join-group");
-  const { user, isLoading: isAuthLoading } = useAuth();
-  const [isJoining, setIsJoining] = useState(false);
+  const { user } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [requiresRegistration, setRequiresRegistration] = useState(false);
   const [invitedEmail, setInvitedEmail] = useState<string | null>(null);
-  const [hasCheckedInvitation, setHasCheckedInvitation] = useState(false);
 
   const form = useForm({
     resolver: zodResolver(registrationSchema),
@@ -52,98 +50,90 @@ export default function JoinGroupPage() {
     }
 
     const checkInvitation = async () => {
-      if (isJoining || hasCheckedInvitation) return;
+      if (isLoading) return;
 
       try {
-        setIsJoining(true);
-        const response = await apiRequest("POST", "/api/accept-invitation", { token });
+        setIsLoading(true);
+        const response = await apiRequest("GET", `/api/invitations/${token}`);
         const data = await response.json();
 
-        if (response.ok) {
-          setLocation("/"); // Success - redirect to home
+        if (!response.ok) {
+          setError(data.message || "Invalid invitation");
           return;
         }
 
-        // Handle various scenarios based on the response
+        setInvitedEmail(data.email);
+
         if (data.requiresLogin) {
-          setInvitedEmail(data.email);
           setLocation(`/auth?redirect=/join-group?token=${token}`);
           return;
         }
 
         if (data.requiresRegistration) {
-          setInvitedEmail(data.email);
           setRequiresRegistration(true);
-          setHasCheckedInvitation(true);
           return;
         }
 
-        setError(data.message || "Failed to join group");
+        // If we're here, we're logged in with the correct email
+        await acceptInvitation();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to verify invitation");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const acceptInvitation = async () => {
+      try {
+        setIsLoading(true);
+        const response = await apiRequest("POST", "/api/accept-invitation", { token });
+
+        if (!response.ok) {
+          const data = await response.json();
+          if (data.requiresLogin) {
+            setLocation(`/auth?redirect=/join-group?token=${token}`);
+            return;
+          }
+          throw new Error(data.message || "Failed to join group");
+        }
+
+        setLocation("/"); // Success - redirect to home
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to join group");
       } finally {
-        setIsJoining(false);
+        setIsLoading(false);
       }
     };
 
     checkInvitation();
-  }, [token, setLocation, hasCheckedInvitation]);
-
-  // Second effect to handle authenticated user joining
-  useEffect(() => {
-    if (!token || !user || isJoining) return;
-
-    const joinGroup = async () => {
-      try {
-        setIsJoining(true);
-        const response = await apiRequest("POST", "/api/accept-invitation", { token });
-
-        if (response.ok) {
-          setLocation("/");
-        } else {
-          const data = await response.json();
-          setError(data.message || "Failed to join group");
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to join group");
-      } finally {
-        setIsJoining(false);
-      }
-    };
-
-    joinGroup();
-  }, [user, token, setLocation]);
+  }, [token, user]);
 
   const onSubmit = async (values: z.infer<typeof registrationSchema>) => {
     if (!token) return;
 
     try {
-      setIsJoining(true);
+      setIsLoading(true);
       const response = await apiRequest("POST", "/api/accept-invitation", {
         token,
         ...values,
       });
 
-      if (response.ok) {
-        setLocation("/");
-      } else {
+      if (!response.ok) {
         const data = await response.json();
-        setError(data.message || "Failed to complete registration");
+        if (data.error === "USERNAME_EXISTS") {
+          form.setError("username", { message: "Username already taken" });
+          return;
+        }
+        throw new Error(data.message || "Failed to complete registration");
       }
+
+      setLocation("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to complete registration");
     } finally {
-      setIsJoining(false);
+      setIsLoading(false);
     }
   };
-
-  if (isAuthLoading || (isJoining && !requiresRegistration)) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -202,9 +192,9 @@ export default function JoinGroupPage() {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={isJoining}
+                disabled={isLoading}
               >
-                {isJoining && (
+                {isLoading && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
                 Complete Registration

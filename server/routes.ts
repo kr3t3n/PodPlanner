@@ -169,12 +169,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(invitation);
   });
 
+  app.get("/api/invitations/:token", async (req, res) => {
+    try {
+      const invitation = await storage.getValidGroupInvitation(req.params.token);
+      if (!invitation) {
+        return res.status(400).json({ message: "Invalid or expired invitation" });
+      }
+
+      // Check if this email already has an account
+      const existingUser = await storage.getUserByEmail(invitation.email);
+
+      return res.json({
+        email: invitation.email,
+        groupName: invitation.group.name,
+        requiresRegistration: !existingUser,
+        requiresLogin: existingUser && !req.user
+      });
+    } catch (error) {
+      console.error("Error checking invitation:", error);
+      res.status(500).send("Failed to verify invitation");
+    }
+  });
+
   app.post("/api/accept-invitation", async (req, res) => {
     const { token, username, password } = req.body;
 
     const invitation = await storage.getValidGroupInvitation(token);
     if (!invitation) {
-      return res.status(400).send("Invalid or expired invitation");
+      return res.status(400).json({ message: "Invalid or expired invitation" });
     }
 
     try {
@@ -197,7 +219,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (username && password) {
           const existingUsername = await storage.getUserByUsername(username);
           if (existingUsername) {
-            return res.status(400).send("Username already exists");
+            return res.status(400).json({ 
+              message: "Username already exists",
+              error: "USERNAME_EXISTS"
+            });
           }
 
           // Create new user with the invitation email
@@ -245,7 +270,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(invitation.group);
     } catch (error) {
       console.error("Error accepting invitation:", error);
-      res.status(500).send("Failed to process invitation");
+      res.status(500).json({ message: "Failed to process invitation" });
     }
   });
 
