@@ -152,7 +152,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       used: false,
     });
 
-    const inviteUrl = `${req.protocol}://${req.get("host")}/join-group`;
+    // Get the base URL from request headers
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.headers['x-forwarded-host'] || req.get('host');
+    const inviteUrl = `${protocol}://${host}/join-group?token=${token}`;
+
     await sendGroupInvitationEmail(
       email,
       group.name,
