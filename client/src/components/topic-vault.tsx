@@ -25,6 +25,11 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+type TopicFormData = {
+  name?: string;
+  url?: string;
+};
+
 export function TopicVault({ groupId }: { groupId: number | null }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
@@ -35,7 +40,7 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
     enabled: !!groupId,
   });
 
-  const form = useForm({
+  const form = useForm<TopicFormData>({
     resolver: zodResolver(insertTopicSchema),
     defaultValues: {
       name: "",
@@ -44,13 +49,16 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
   });
 
   const createTopicMutation = useMutation({
-    mutationFn: async (data: { name?: string; url?: string }) => {
-      // If there's no name but there is a URL, use URL as the name
+    mutationFn: async (data: TopicFormData) => {
+      if (!groupId) throw new Error("No group selected");
+
       const payload = {
         ...data,
         name: data.name || data.url,
-        groupId
+        groupId,
       };
+
+      console.log("Creating topic with payload:", payload);
 
       const res = await apiRequest(
         "POST",
@@ -62,6 +70,7 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
         const error = await res.text();
         throw new Error(error);
       }
+
       return res.json();
     },
     onSuccess: () => {
@@ -74,6 +83,7 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
       });
     },
     onError: (error: Error) => {
+      console.error("Failed to create topic:", error);
       toast({
         title: "Failed to create topic",
         description: error.message,
@@ -93,6 +103,10 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/groups/${groupId}/topics`] });
+      toast({
+        title: "Topic archived",
+        description: "Topic has been moved to the archive",
+      });
     },
   });
 
@@ -126,8 +140,9 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
     );
   }
 
-  const handleSubmit = (data: { name?: string; url?: string }) => {
-    createTopicMutation.mutate(data);
+  const onSubmit = async (data: TopicFormData) => {
+    console.log("Form submitted with data:", data);
+    await createTopicMutation.mutateAsync(data);
   };
 
   return (
@@ -152,7 +167,7 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
               </DialogHeader>
               <Form {...form}>
                 <form
-                  onSubmit={form.handleSubmit(handleSubmit)}
+                  onSubmit={form.handleSubmit(onSubmit)}
                   className="space-y-4"
                 >
                   <FormField
