@@ -28,7 +28,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 type TopicFormData = {
   name: string;
-  url?: string;
+  url: string;
 };
 
 export function TopicVault({ groupId }: { groupId: number | null }) {
@@ -51,25 +51,42 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
 
   const createTopicMutation = useMutation({
     mutationFn: async (data: TopicFormData) => {
-      if (!groupId) throw new Error("No group selected");
+      console.log("Starting topic creation with data:", data);
+
+      if (!groupId) {
+        console.error("No group selected");
+        throw new Error("No group selected");
+      }
 
       // Clean the data before sending
       const payload = {
         name: data.name,
-        url: data.url || undefined, // Only send url if it's not empty
+        url: data.url || undefined,
         groupId,
       };
 
-      const res = await apiRequest("POST", `/api/groups/${groupId}/topics`, payload);
+      console.log("Sending payload:", payload);
 
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(errorText || "Failed to create topic");
+      try {
+        const res = await apiRequest("POST", `/api/groups/${groupId}/topics`, payload);
+        console.log("API Response status:", res.status);
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error("API Error:", errorText);
+          throw new Error(errorText || "Failed to create topic");
+        }
+
+        const result = await res.json();
+        console.log("API Success response:", result);
+        return result;
+      } catch (error) {
+        console.error("API Call error:", error);
+        throw error;
       }
-
-      return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Mutation succeeded:", data);
       queryClient.invalidateQueries({ queryKey: [`/api/groups/${groupId}/topics`] });
       setIsDialogOpen(false);
       form.reset();
@@ -79,7 +96,7 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
       });
     },
     onError: (error: Error) => {
-      console.error("Failed to create topic:", error);
+      console.error("Mutation failed:", error);
       toast({
         title: "Failed to create topic",
         description: error.message,
@@ -88,41 +105,14 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
     },
   });
 
-  const onSubmit = (data: TopicFormData) => {
-    createTopicMutation.mutate(data);
+  const onSubmit = async (data: TopicFormData) => {
+    console.log("Form submitted with data:", data);
+    try {
+      await createTopicMutation.mutateAsync(data);
+    } catch (error) {
+      console.error("Form submission error:", error);
+    }
   };
-
-  const archiveTopicMutation = useMutation({
-    mutationFn: async (topicId: number) => {
-      const res = await apiRequest("PATCH", `/api/topics/${topicId}`, {
-        isArchived: true,
-      });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/groups/${groupId}/topics`] });
-      toast({
-        title: "Success",
-        description: "Topic archived successfully",
-      });
-    },
-  });
-
-  const deleteTopicMutation = useMutation({
-    mutationFn: async (topicId: number) => {
-      const res = await apiRequest("PATCH", `/api/topics/${topicId}`, {
-        isDeleted: true,
-      });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/groups/${groupId}/topics`] });
-      toast({
-        title: "Success",
-        description: "Topic deleted successfully",
-      });
-    },
-  });
 
   if (!groupId) {
     return <div>Please select a group first</div>;
@@ -135,7 +125,6 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
       </div>
     );
   }
-
 
   return (
     <div className="space-y-4">
@@ -162,7 +151,12 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
               </DialogHeader>
               <Form {...form}>
                 <form
-                  onSubmit={form.handleSubmit(onSubmit)}
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    console.log("Form submit event triggered");
+                    const result = form.handleSubmit(onSubmit)(e);
+                    console.log("Form handle submit result:", result);
+                  }}
                   className="space-y-4"
                 >
                   <FormField
@@ -185,7 +179,7 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
                       <FormItem>
                         <FormLabel>Reference URL (optional)</FormLabel>
                         <FormControl>
-                          <Input {...field} type="url" placeholder="https://..." />
+                          <Input {...field} type="url" placeholder="https://" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
