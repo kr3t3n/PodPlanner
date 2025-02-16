@@ -292,7 +292,7 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
                     className="text-sm text-blue-500 hover:underline flex items-center gap-1"
                   >
                     <Link className="h-4 w-4" />
-                    View Reference
+                    {selectedTopic.url}
                   </a>
                 )}
               </DialogTitle>
