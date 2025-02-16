@@ -11,11 +11,20 @@ import {
   type InsertTopic,
   type TopicComment,
   type InsertTopicComment,
+  users,
+  groups,
+  groupMembers,
+  episodes,
+  topics,
+  topicComments,
 } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 import session from "express-session";
-import createMemoryStore from "memorystore";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
 
-const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   sessionStore: session.Store;
@@ -34,108 +43,111 @@ export interface IStorage {
   getTopicComments(topicId: number): Promise<TopicComment[]>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private groups: Map<number, Group>;
-  private groupMembers: Map<number, GroupMember>;
-  private episodes: Map<number, Episode>;
-  private topics: Map<number, Topic>;
-  private topicComments: Map<number, TopicComment>;
+export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
-  private currentId: number;
 
   constructor() {
-    this.users = new Map();
-    this.groups = new Map();
-    this.groupMembers = new Map();
-    this.episodes = new Map();
-    this.topics = new Map();
-    this.topicComments = new Map();
-    this.currentId = 1;
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000,
+    this.sessionStore = new PostgresSessionStore({
+      pool,
+      createTableIfMissing: true,
     });
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, username));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentId++;
-    const user = { id, ...insertUser };
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
 
   async createGroup(insertGroup: InsertGroup): Promise<Group> {
-    const id = this.currentId++;
-    const group = { id, ...insertGroup };
-    this.groups.set(id, group);
+    const [group] = await db.insert(groups).values(insertGroup).returning();
     return group;
   }
 
   async getGroup(id: number): Promise<Group | undefined> {
-    return this.groups.get(id);
+    const [group] = await db.select().from(groups).where(eq(groups.id, id));
+    return group;
   }
 
   async addGroupMember(insertMember: InsertGroupMember): Promise<GroupMember> {
-    const id = this.currentId++;
-    const member = { id, ...insertMember };
-    this.groupMembers.set(id, member);
+    const [member] = await db
+      .insert(groupMembers)
+      .values({ ...insertMember, isAdmin: insertMember.isAdmin ?? false })
+      .returning();
     return member;
   }
 
   async getGroupMembers(groupId: number): Promise<GroupMember[]> {
-    return Array.from(this.groupMembers.values()).filter(
-      (member) => member.groupId === groupId,
-    );
+    return await db
+      .select()
+      .from(groupMembers)
+      .where(eq(groupMembers.groupId, groupId));
   }
 
   async createEpisode(insertEpisode: InsertEpisode): Promise<Episode> {
-    const id = this.currentId++;
-    const episode = { id, ...insertEpisode };
-    this.episodes.set(id, episode);
+    const [episode] = await db
+      .insert(episodes)
+      .values({
+        ...insertEpisode,
+        status: insertEpisode.status ?? "draft",
+        repeatPattern: insertEpisode.repeatPattern ?? null,
+      })
+      .returning();
     return episode;
   }
 
   async getGroupEpisodes(groupId: number): Promise<Episode[]> {
-    return Array.from(this.episodes.values()).filter(
-      (episode) => episode.groupId === groupId,
-    );
+    return await db
+      .select()
+      .from(episodes)
+      .where(eq(episodes.groupId, groupId));
   }
 
   async createTopic(insertTopic: InsertTopic): Promise<Topic> {
-    const id = this.currentId++;
-    const topic = { id, ...insertTopic };
-    this.topics.set(id, topic);
+    const [topic] = await db
+      .insert(topics)
+      .values({
+        ...insertTopic,
+        isArchived: false,
+        isDeleted: false,
+      })
+      .returning();
     return topic;
   }
 
   async getGroupTopics(groupId: number): Promise<Topic[]> {
-    return Array.from(this.topics.values()).filter(
-      (topic) => topic.groupId === groupId,
-    );
+    return await db
+      .select()
+      .from(topics)
+      .where(eq(topics.groupId, groupId));
   }
 
   async createTopicComment(insertComment: InsertTopicComment): Promise<TopicComment> {
-    const id = this.currentId++;
-    const comment = { id, ...insertComment };
-    this.topicComments.set(id, comment);
+    const [comment] = await db
+      .insert(topicComments)
+      .values(insertComment)
+      .returning();
     return comment;
   }
 
   async getTopicComments(topicId: number): Promise<TopicComment[]> {
-    return Array.from(this.topicComments.values()).filter(
-      (comment) => comment.topicId === topicId,
-    );
+    return await db
+      .select()
+      .from(topicComments)
+      .where(eq(topicComments.topicId, topicId));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
