@@ -90,7 +90,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(topics);
   });
 
-  // Topic comment routes
+  // Add patch route for updating topics
+  app.patch("/api/topics/:id", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const topic = await storage.updateTopic(parseInt(req.params.id), req.body);
+    res.json(topic);
+  });
+
+
+  // Routes for topic-episode associations
+  app.post("/api/episodes/:episodeId/topics/:topicId", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    await storage.addTopicToEpisode(
+      parseInt(req.params.episodeId),
+      parseInt(req.params.topicId),
+      req.body.order
+    );
+    res.sendStatus(200);
+  });
+
+  app.delete("/api/episodes/:episodeId/topics/:topicId", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    await storage.removeTopicFromEpisode(
+      parseInt(req.params.episodeId),
+      parseInt(req.params.topicId)
+    );
+    res.sendStatus(200);
+  });
+
+  app.get("/api/episodes/:id/topics", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const topics = await storage.getEpisodeTopics(parseInt(req.params.id));
+    res.json(topics);
+  });
+
+  // Topic comment routes (only one instance needed)
   app.post("/api/topics/:id/comments", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     const comment = await storage.createTopicComment({

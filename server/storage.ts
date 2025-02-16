@@ -44,6 +44,13 @@ export interface IStorage {
   getGroupTopics(groupId: number): Promise<Topic[]>;
   createTopicComment(comment: InsertTopicComment): Promise<TopicComment>;
   getTopicComments(topicId: number): Promise<TopicComment[]>;
+  updateTopic(
+    id: number,
+    updateData: Partial<InsertTopic> & { isArchived?: boolean; isDeleted?: boolean }
+  ): Promise<Topic>;
+  getEpisodeTopics(episodeId: number): Promise<(Topic & { order: number })[]>;
+  addTopicToEpisode(episodeId: number, topicId: number, order: number): Promise<void>;
+  removeTopicFromEpisode(episodeId: number, topicId: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -191,6 +198,55 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(topics)
       .where(eq(topics.groupId, groupId));
+  }
+  async updateTopic(
+    id: number,
+    updateData: Partial<InsertTopic> & { isArchived?: boolean; isDeleted?: boolean }
+  ): Promise<Topic> {
+    const [topic] = await db
+      .update(topics)
+      .set(updateData)
+      .where(eq(topics.id, id))
+      .returning();
+    return topic;
+  }
+
+  async getEpisodeTopics(episodeId: number): Promise<(Topic & { order: number })[]> {
+    return await db
+      .select({
+        ...topics,
+        order: episodeTopics.order,
+      })
+      .from(topics)
+      .innerJoin(
+        episodeTopics,
+        and(
+          eq(episodeTopics.topicId, topics.id),
+          eq(episodeTopics.episodeId, episodeId)
+        )
+      )
+      .orderBy(episodeTopics.order);
+  }
+
+  async addTopicToEpisode(episodeId: number, topicId: number, order: number): Promise<void> {
+    await db
+      .insert(episodeTopics)
+      .values({ episodeId, topicId, order })
+      .onConflictDoUpdate({
+        target: [episodeTopics.episodeId, episodeTopics.topicId],
+        set: { order },
+      });
+  }
+
+  async removeTopicFromEpisode(episodeId: number, topicId: number): Promise<void> {
+    await db
+      .delete(episodeTopics)
+      .where(
+        and(
+          eq(episodeTopics.episodeId, episodeId),
+          eq(episodeTopics.topicId, topicId)
+        )
+      );
   }
 
   async createTopicComment(insertComment: InsertTopicComment): Promise<TopicComment> {

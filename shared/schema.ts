@@ -68,7 +68,12 @@ export const insertEpisodeSchema = createInsertSchema(episodes);
 export type InsertEpisode = z.infer<typeof insertEpisodeSchema>;
 export type Episode = typeof episodes.$inferSelect;
 
-export const insertTopicSchema = createInsertSchema(topics);
+export const insertTopicSchema = createInsertSchema(topics).extend({
+  name: z.string().min(1, "Name is required").optional(),
+  url: z.string().url("Must be a valid URL").optional(),
+}).refine((data) => data.name || data.url, {
+  message: "Either name or URL must be provided",
+});
 export type InsertTopic = z.infer<typeof insertTopicSchema>;
 export type Topic = typeof topics.$inferSelect;
 

@@ -29,8 +29,9 @@ import { Badge } from "@/components/ui/badge";
 
 export function TopicVault({ groupId }: { groupId: number | null }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   const { toast } = useToast();
-  
+
   const { data: topics, isLoading } = useQuery<Topic[]>({
     queryKey: [`/api/groups/${groupId}/topics`],
     enabled: !!groupId,
@@ -78,6 +79,24 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
     },
   });
 
+  const deleteTopicMutation = useMutation({
+    mutationFn: async (topicId: number) => {
+      const res = await apiRequest(
+        "PATCH",
+        `/api/topics/${topicId}`,
+        { isDeleted: true }
+      );
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/groups/${groupId}/topics`] });
+      toast({
+        title: "Topic deleted",
+        description: "Topic has been moved to deleted status",
+      });
+    },
+  });
+
   if (!groupId) {
     return <div>Please select a group first</div>;
   }
@@ -94,66 +113,75 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Topic Vault</h2>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>New Topic</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Topic</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit((data) =>
-                  createTopicMutation.mutate(data)
-                )}
-                className="space-y-4"
-              >
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Topic Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowArchived(!showArchived)}
+          >
+            {showArchived ? "Show Active" : "Show Archived"}
+            <Archive className="ml-2 h-4 w-4" />
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>New Topic</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Topic</DialogTitle>
+              </DialogHeader>
+              <Form {...form}>
+                <form
+                  onSubmit={form.handleSubmit((data) =>
+                    createTopicMutation.mutate(data)
                   )}
-                />
-                <FormField
-                  control={form.control}
-                  name="url"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Reference URL (optional)</FormLabel>
-                      <FormControl>
-                        <Input {...field} type="url" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={createTopicMutation.isPending}
+                  className="space-y-4"
                 >
-                  {createTopicMutation.isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Create Topic
-                </Button>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Topic Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="url"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Reference URL (optional)</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="url" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={createTopicMutation.isPending}
+                  >
+                    {createTopicMutation.isPending && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Create Topic
+                  </Button>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <ScrollArea className="h-[600px] rounded-md border p-4">
         <div className="space-y-4">
-          {topics?.filter(t => !t.isArchived).map((topic) => (
+          {topics?.filter(t => t.isArchived === showArchived && !t.isDeleted).map((topic) => (
             <div
               key={topic.id}
               className="p-4 border rounded-lg space-y-2"
@@ -181,7 +209,11 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
                   >
                     <Archive className="h-4 w-4" />
                   </Button>
-                  <Button variant="destructive" size="sm">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => deleteTopicMutation.mutate(topic.id)}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
