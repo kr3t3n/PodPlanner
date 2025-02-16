@@ -80,6 +80,7 @@ export interface IStorage {
   createGroupInviteCode(code: InsertGroupInviteCode): Promise<GroupInviteCode>;
   getValidGroupInviteCode(code: string): Promise<(GroupInviteCode & { group: Group }) | undefined>;
   markGroupInviteCodeAsUsed(id: number): Promise<void>;
+  updateGroupMember(id: number, data: { isAdmin: boolean }): Promise<GroupMember>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -476,6 +477,14 @@ export class DatabaseStorage implements IStorage {
       .update(groupInviteCodes)
       .set({ used: true })
       .where(eq(groupInviteCodes.id, id));
+  }
+  async updateGroupMember(id: number, data: { isAdmin: boolean }): Promise<GroupMember> {
+    const [member] = await db
+      .update(groupMembers)
+      .set(data)
+      .where(eq(groupMembers.id, id))
+      .returning();
+    return member;
   }
 }
 

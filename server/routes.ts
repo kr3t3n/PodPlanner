@@ -233,6 +233,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(members);
   });
 
+  // Add this route within the registerRoutes function
+  app.patch("/api/groups/:groupId/members/:memberId", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const groupId = parseInt(req.params.groupId);
+    const memberId = parseInt(req.params.memberId);
+    const { isAdmin } = req.body;
+
+    // Check if user is admin
+    const members = await storage.getGroupMembers(groupId);
+    const isUserAdmin = members.some(m => m.userId === req.user!.id && m.isAdmin);
+    if (!isUserAdmin) return res.sendStatus(403);
+
+    try {
+      const updatedMember = await storage.updateGroupMember(memberId, { isAdmin });
+      res.json(updatedMember);
+    } catch (error) {
+      console.error("Error updating member role:", error);
+      res.status(500).json({ error: "Failed to update member role" });
+    }
+  });
+
   // Episode routes
   app.post("/api/groups/:id/episodes", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
