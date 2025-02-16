@@ -46,12 +46,19 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
   });
 
   const createTopicMutation = useMutation({
-    mutationFn: async (data: { name: string; url?: string }) => {
+    mutationFn: async (data: { name?: string; url?: string }) => {
       const res = await apiRequest(
         "POST",
         `/api/groups/${groupId}/topics`,
-        data
+        {
+          ...data,
+          groupId
+        }
       );
+      if (!res.ok) {
+        const error = await res.text();
+        throw new Error(error);
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -61,6 +68,13 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
       toast({
         title: "Topic created",
         description: "Your topic has been added to the vault",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to create topic",
+        description: error.message,
+        variant: "destructive",
       });
     },
   });
@@ -109,6 +123,10 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
     );
   }
 
+  const onSubmit = (data: { name?: string; url?: string }) => {
+    createTopicMutation.mutate(data);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -131,9 +149,7 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
               </DialogHeader>
               <Form {...form}>
                 <form
-                  onSubmit={form.handleSubmit((data) =>
-                    createTopicMutation.mutate(data)
-                  )}
+                  onSubmit={form.handleSubmit(onSubmit)}
                   className="space-y-4"
                 >
                   <FormField
