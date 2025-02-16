@@ -33,7 +33,7 @@ export function GroupSettings({ groupId }: { groupId?: number }) {
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [isInviteCodeDialogOpen, setIsInviteCodeDialogOpen] = useState(false);
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
-  const [inviteCode, setInviteCode] = useState<string | null>(null); // Added state variable
+  const [inviteCode, setInviteCode] = useState<string | null>(null); 
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -75,10 +75,9 @@ export function GroupSettings({ groupId }: { groupId?: number }) {
       const res = await apiRequest("POST", `/api/groups/${groupId}/invite`, data);
       return res.json();
     },
-    onSuccess: (data) => { // Updated onSuccess callback
+    onSuccess: (data) => { 
       setIsInviteDialogOpen(false);
       inviteForm.reset();
-      // Set the code from the response and show the code dialog
       setGeneratedCode(data.code);
       setIsInviteCodeDialogOpen(true);
       toast({
@@ -152,15 +151,32 @@ export function GroupSettings({ groupId }: { groupId?: number }) {
       memberId: number;
       isAdmin: boolean;
     }) => {
-      const res = await apiRequest(
-        "PATCH",
-        `/api/groups/${groupId}/members/${memberId}`,
-        { isAdmin }
-      );
-      return res.json();
+      try {
+        const res = await apiRequest(
+          "PATCH",
+          `/api/groups/${groupId}/members/${memberId}`,
+          { isAdmin }
+        );
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(`Failed to update member role: ${errorText}`);
+        }
+
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          throw new Error("Server response was not JSON");
+        }
+
+        return res.json();
+      } catch (error) {
+        if (error instanceof Error) {
+          throw error;
+        }
+        throw new Error("An unexpected error occurred");
+      }
     },
     onSuccess: () => {
-      // Invalidate both the members list and the group queries to ensure UI updates
       queryClient.invalidateQueries({ queryKey: [`/api/groups/${groupId}/members`] });
       queryClient.invalidateQueries({ queryKey: [`/api/groups/${groupId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/groups"] });
