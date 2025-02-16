@@ -1,0 +1,273 @@
+# Product Requirements Document (PRD)
+
+## 1. Overview
+
+This document outlines the requirements for a simple web application to facilitate planning and scheduling podcast episodes. The core functionality allows users to create groups (named by the creator), invite other users, manage roles (Admin vs. Member), and collaborate on podcast topics and schedules.
+
+## 2. Objectives
+
+1. **Group Collaboration**: Enable multiple users to join a group and collaborate on podcast episodes in a centralized place.
+2. **Episode Planning**: Provide tools to schedule and plan episodes with repeating patterns.
+3. **Topic Management**: Allow members to propose, comment on, and organize topics for each episode.
+4. **Role-Based Control**: Grant Admins the ability to manage group details, schedules, topics, and statuses while Members have limited privileges.
+
+## 3. Scope
+
+- **In Scope**
+
+  - User authentication using Replit accounts.
+  - Creation and management of user groups (with a group name).
+  - Role assignment within a group (Admin or Member).
+  - Planning episodes via a calendar-like interface with repeat scheduling options.
+  - Creation and management of a “Topics vault.”
+  - Linking topics to calendar items (episodes).
+  - Status management for each calendar item (Draft, Planned, Done, Deleted).
+  - Basic user interface to view, add, edit, reorder, and remove items.
+
+- **Out of Scope**
+
+  - Payment or subscription features (the app is free).
+  - Complex analytics or reporting.
+  - Integration with external calendar systems (e.g., Google Calendar) at this stage.
+  - Mobile app or offline capabilities beyond basic web use.
+
+## 4. Key Features & Functionalities
+
+1. **User Registration & Authentication**
+
+   - Users must sign in via their **Replit** accounts.
+   - Once authenticated, users can either create or join a group.
+
+2. **Group Management**
+
+   - **Create Group**: The user who creates the group provides the group name and automatically becomes an Admin.
+   - **Change Group Name**: Any Admin can update the group name.
+   - **Invite Users**: Admin can invite new users to the group by sharing an invite link or manually adding them.
+   - **Role Assignment**: Admin(s) can upgrade any member to Admin status or revoke Admin privileges.
+   - **Removal of Users**: Admin(s) can remove members or other admins from the group.
+
+3. **Calendar & Scheduling**
+
+   - **Calendar Overview**: Displays scheduled episodes.
+   - **Repeating Placeholders**: Admin can create repeating episodes on a customizable schedule (e.g., every Saturday, every 5 days, last Friday of the month, etc.).
+   - **Placeholder Titles**: Default title is the date string (e.g., “Feb 16, 2025 (Sunday)”), but Admin can edit it.
+   - **Statuses**: Each calendar item can be labeled as Draft, Planned, Done, or Deleted. Admins can change these statuses. Episodes in Deleted status are hidden but still exist in the database.
+
+4. **Topics Vault**
+
+   - **Creation of Topics**: Both Admins and Members can create topics by providing at least one of:
+     - **URL** (acts as the topic’s name if no name is provided).
+     - **Name** (required if no URL is provided).
+   - **Topic Comments**: All users can add comments to a topic. The comments are displayed in separate columns/areas per user to keep them distinct.
+   - **Topic Organization**: Topics can be linked to multiple episodes. Admins can add topics from the vault to specific calendar items (episodes).
+   - **Topic Visibility**:
+     - **Active**: Topics are displayed in the default view.
+     - **Archive**: Topics can be archived, removing them from the default view while still accessible in an Archived Topics view.
+     - **Delete**: Topics can also be deleted, in which case they are hidden from all standard views but remain in the database.
+
+5. **Topic Linking & Ordering in Episodes**
+
+   - **Add Topics to Episodes**: Admin can attach one or more topics from the vault to any calendar item.
+   - **Ordering/Reordering**: Admin can reorder topics within an episode’s schedule as needed.
+   - **Removal**: Admin can remove a topic from an episode.
+   - **Episode Association**: The topics vault list displays which episodes each topic is associated with.
+
+## 5. User Roles & Permissions
+
+1. **Admin**
+
+   - **Group**: Can invite users, remove users, assign or revoke admin rights, and change group name.
+   - **Calendar**: Can create, edit, or delete calendar items, set repeating schedules, change statuses of episodes.
+   - **Topics**: Can create topics, add topics to episodes, reorder topics, remove topics from episodes, archive/delete topics.
+   - **Comments**: Can add and edit their own comments on topics (cannot edit others’ comments).
+
+2. **Member**
+
+   - **Group**: Can only view group settings and see the list of members.
+   - **Calendar**: Can view the schedule and statuses.
+   - **Topics**: Can create new topics in the vault, add comments to existing topics.
+   - **Comments**: Can add and edit their own comments on topics (cannot edit others’ comments).
+
+## 6. User Flows
+
+1. **Group Creation & Invitation**
+
+   1. User logs in via Replit account.
+   2. User clicks “Create Group.”
+   3. User provides a group name.
+   4. System creates a new group and assigns the user as Admin.
+   5. Admin gets a link or interface to invite new members.
+
+2. **User Join a Group**
+
+   1. Invited user logs in via Replit account.
+   2. Clicks on the invitation link or accepts an invite in-app.
+   3. Joins the group as a Member by default.
+
+3. **Manage Roles**
+
+   1. Admin navigates to group settings and sees the list of members.
+   2. Admin can promote a member to Admin or revoke Admin status.
+
+4. **Calendar Management**
+
+   1. Admin chooses “Add New Episode” or “Add Repeating Episode.”
+   2. Admin specifies the frequency (daily/weekly/monthly), sets start date, end date if applicable.
+   3. Calendar placeholders are generated with default titles (“Month Day, Year (Day of Week)”).
+   4. Admin can edit each placeholder’s title.
+
+5. **Topic Vault**
+
+   1. Any user clicks “Create Topic.”
+   2. Inputs **URL** or **Name** (at least one required).
+   3. (Optional) Adds initial comment.
+   4. Topic is added to the vault and visible to all group members.
+   5. Users can later archive or delete topics if they are Admin, or view archived topics from a separate screen.
+
+6. **Add Topics to Episodes**
+
+   1. Admin opens an episode from the calendar.
+   2. Admin clicks “Add Topic,” selects one or more existing topics from the vault (or creates a new topic if needed).
+   3. Admin can reorder topics within the episode.
+   4. Admin can remove topics from the episode.
+
+7. **Topic Comments**
+
+   1. User selects a topic.
+   2. User adds or edits comments in their personal comment column/area.
+   3. All comments appear in parallel columns/areas for easy distinction.
+
+8. **Episode Status**
+
+   1. Admin changes episode status to Draft, Planned, Done, or Deleted as needed.
+   2. Members can view the status but cannot change it.
+   3. Deleted episodes are hidden but remain in the database.
+
+## 7. Requirements
+
+### 7.1 Functional Requirements
+
+1. **User Authentication**
+
+   - FR1: The system must authenticate users via their Replit accounts.
+   - FR2: The system must log out users upon explicit request or session timeout.
+
+2. **Group Management**
+
+   - FR3: The system must create a new group when an authenticated user opts to create one, requiring a group name.
+   - FR4: The system must assign the creator of a group as an Admin.
+   - FR5: Admins must be able to invite users (via link or an in-app invitation) and remove them.
+   - FR6: Admins must be able to change any member’s role to Admin or revoke Admin rights.
+   - FR7: Admins must be able to update the group name.
+
+3. **Calendar & Scheduling**
+
+   - FR8: The system must allow Admins to create calendar placeholders for episodes.
+   - FR9: The system must support repeating placeholders (configurable daily, weekly, monthly, custom intervals).
+   - FR10: Placeholders must have a default title derived from the date.
+   - FR11: Admins must be able to edit placeholder titles.
+   - FR12: Each calendar item must have a status with default value “Draft.”
+   - FR13: Admins must be able to change a calendar item’s status to Planned, Done, or Deleted.
+   - FR14: Episodes in Deleted status are hidden from normal views but remain in the database.
+
+4. **Topics Vault**
+
+   - FR15: Any user (Admin or Member) can create a new topic by supplying at least one of (URL, Name).
+   - FR16: If only a URL is provided, that URL is displayed as the topic name.
+   - FR17: If no URL is provided, a Name is mandatory.
+   - FR18: The system must store user comments on each topic in a separate “column” or distinct section for each user.
+   - FR19: All group members can view and add to the “Topics vault.”
+   - FR20: Topics can be **archived**, removing them from active lists but still accessible in an Archived Topics view.
+   - FR21: Topics can be **deleted**, removing them from all standard lists but still existing in the database.
+
+5. **Episode-Topic Linking**
+
+   - FR22: Admins must be able to attach topics from the vault to one or more calendar items (episodes).
+   - FR23: Admins must be able to reorder topics attached to an episode.
+   - FR24: Admins must be able to remove a topic from an episode.
+   - FR25: The Topics vault list must show which episodes each topic is associated with.
+
+6. **Comments on Topics**
+
+   - FR26: All users can create, edit, or delete their own comments on a topic.
+   - FR27: The system must display these comments clearly separated by user.
+
+### 7.2 Non-Functional Requirements
+
+1. **Usability**
+
+   - NFR1: The UI should be intuitive, especially for group and episode management.
+   - NFR2: Users should quickly see the schedule and topics.
+
+2. **Performance**
+
+   - NFR3: Calendar rendering should be efficient, supporting up to reasonable repeated placeholders without significant load time.
+   - NFR4: Topic vault searches and retrieval should be near-instant (under 2 seconds for typical usage).
+
+3. **Reliability & Availability**
+
+   - NFR5: The system should handle concurrent edits gracefully (e.g., if two admins are editing the schedule simultaneously).
+   - NFR6: The system should have minimal downtime.
+
+4. **Security**
+
+   - NFR7: Only authenticated users may access the groups and data.
+   - NFR8: Ensure that user data is protected from unauthorized access (database-level security, etc.).
+
+5. **Maintainability**
+
+   - NFR9: The system design should allow for adding new features (e.g., advanced scheduling rules) without major refactoring.
+
+6. **Scalability**
+
+   - NFR10: Must handle multiple groups and multiple calendars with a moderate number of episodes and topics.
+
+## 8. Acceptance Criteria
+
+1. **Group & User Management**
+
+   - AC1: When a user creates a group, they must provide a name, and they are listed as Admin.
+   - AC2: Admin is able to invite a new user and that user can successfully log in and see the group.
+   - AC3: Admin can change a user’s role to Admin and see the updated role in the member list.
+   - AC4: Admin can update the group name, and the updated name is displayed.
+
+2. **Calendar Functionality**
+
+   - AC5: Admin can create a repeating schedule. Corresponding placeholders appear in the calendar with correct day-based default titles.
+   - AC6: Admin can rename any placeholder from “Feb 16, 2025 (Sunday)” to a custom string and see it updated.
+   - AC7: Admin can set an episode status to “Done” and it visually updates in the calendar.
+   - AC8: When an episode is deleted, it is removed from the main view but still stored in the database.
+
+3. **Topics Vault**
+
+   - AC9: Any user can create a topic with a URL or Name (at least one).
+   - AC10: Topics appear in the vault with the correct name or URL-based name if no name was provided.
+   - AC11: An Admin can archive or delete a topic, and it no longer appears in the active vault list.
+   - AC12: Deleted or archived topics remain in the database and can be accessed in a separate view (archived or hidden list, as applicable).
+
+4. **Topic Comments**
+
+   - AC13: Different users’ comments show up under distinct columns for the same topic.
+   - AC14: A user can edit or delete only their own comment, and the change is visible immediately.
+
+5. **Episode-Topic Linking**
+
+   - AC15: Admin can add an existing topic to an episode. It should appear in that episode’s topic list.
+   - AC16: Admin can reorder topics for an episode, and the new order is retained upon refresh.
+   - AC17: Admin can remove a topic from an episode, and it no longer appears in that episode’s list.
+   - AC18: The Topics vault list indicates which episodes a topic is linked to.
+
+## 9. Constraints & Assumptions
+
+1. **Constraints**
+
+   - Application uses **PostgreSQL** as the database.
+   - All user authentication must be handled through Replit credentials. No other login mechanism is provided.
+   - The app is free to use; no payment gateway or subscription model is involved.
+
+2. **Assumptions**
+
+   - Users have a basic understanding of a web-based collaboration tool.
+   - Users with Admin role will be responsible for regular maintenance of the group, calendar, and topics.
+   - The number of groups, episodes, or topics per group will remain within manageable limits (not expecting enterprise-scale usage right away).
+
