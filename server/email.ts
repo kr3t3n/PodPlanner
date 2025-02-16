@@ -15,7 +15,7 @@ export async function initializeTransporter() {
     console.log("Creating SMTP transporter with config:", {
       host: process.env.SMTP_HOST,
       port,
-      secure: false, // For port 587, use TLS
+      secure: port === 465,
       auth: {
         user: process.env.SMTP_USER
       }
@@ -24,14 +24,10 @@ export async function initializeTransporter() {
     transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port,
-      secure: false, // For port 587, use TLS
+      secure: port === 465, // true for 465, false for other ports
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS
-      },
-      tls: {
-        // Do not fail on invalid certs
-        rejectUnauthorized: false
       }
     });
 
@@ -109,46 +105,58 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
 
 // Password Reset Email Template Update
 export async function sendPasswordResetEmail(email: string, resetToken: string, resetUrl: string): Promise<boolean> {
-  console.log("Sending password reset email to:", email);
+  console.log("Attempting to send password reset email to:", email);
   const resetLink = `${resetUrl}?token=${resetToken}`;
 
-  return sendEmail({
-    to: email,
-    subject: "Reset Your PodPlanner Password",
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1 style="color: #333; text-align: center;">Reset Your Password</h1>
-        <div style="background-color: #f9f9f9; padding: 20px; border-radius: 5px;">
-          <p>You've requested to reset your password for your PodPlanner account.</p>
-          <p>Click the button below to set a new password:</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${resetLink}" 
-               style="background-color: #0070f3; color: white; padding: 12px 24px; 
-                      text-decoration: none; border-radius: 5px; display: inline-block;">
-              Reset Password
-            </a>
+  try {
+    const result = await sendEmail({
+      to: email,
+      subject: "Reset Your PodPlanner Password",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #333; text-align: center;">Reset Your Password</h1>
+          <div style="background-color: #f9f9f9; padding: 20px; border-radius: 5px;">
+            <p>You've requested to reset your password for your PodPlanner account.</p>
+            <p>Click the button below to set a new password:</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${resetLink}" 
+                style="background-color: #0070f3; color: white; padding: 12px 24px; 
+                        text-decoration: none; border-radius: 5px; display: inline-block;">
+                Reset Password
+              </a>
+            </div>
+            <p style="color: #666; font-size: 14px;">
+              If you didn't request this password reset, you can safely ignore this email. The link will expire in 1 hour.
+            </p>
+            <p style="color: #666; font-size: 14px;">
+              For your security, this password reset link can only be used once.
+            </p>
           </div>
-          <p style="color: #666; font-size: 14px;">
-            If you didn't request this password reset, you can safely ignore this email. The link will expire in 1 hour.
-          </p>
-          <p style="color: #666; font-size: 14px;">
-            For your security, this password reset link can only be used once.
-          </p>
         </div>
-      </div>
-    `,
-    text: `
-      Reset Your PodPlanner Password
+      `,
+      text: `
+        Reset Your PodPlanner Password
 
-      You've requested to reset your password for your PodPlanner account.
-      Click the link below to set a new password:
-      ${resetLink}
+        You've requested to reset your password for your PodPlanner account.
+        Click the link below to set a new password:
+        ${resetLink}
 
-      If you didn't request this password reset, you can safely ignore this email.
-      The link will expire in 1 hour.
-      For your security, this password reset link can only be used once.
-    `,
-  });
+        If you didn't request this password reset, you can safely ignore this email.
+        The link will expire in 1 hour.
+        For your security, this password reset link can only be used once.
+      `,
+    });
+
+    if (result) {
+      console.log("Password reset email sent successfully to:", email);
+    } else {
+      console.error("Failed to send password reset email to:", email);
+    }
+    return result;
+  } catch (error) {
+    console.error("Error sending password reset email:", error);
+    return false;
+  }
 }
 
 // Group Invitation Email

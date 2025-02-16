@@ -66,24 +66,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Password Reset Routes
   app.post("/api/forgot-password", async (req, res) => {
+    console.log("Received forgot password request for email:", req.body.email);
     const { email } = req.body;
     const user = await storage.getUserByEmail(email);
     if (!user) {
+      console.log("No user found with email:", email);
       // Don't reveal if email exists
       return res.sendStatus(200);
     }
 
-    const token = randomBytes(32).toString("hex");
-    await storage.createPasswordResetToken({
-      userId: user.id,
-      token,
-      expiresAt: addHours(new Date(), 1),
-      used: false,
-    });
+    try {
+      console.log("Generating reset token for user:", user.id);
+      const token = randomBytes(32).toString("hex");
+      await storage.createPasswordResetToken({
+        userId: user.id,
+        token,
+        expiresAt: addHours(new Date(), 1),
+        used: false,
+      });
 
-    const resetUrl = `${req.protocol}://${req.get("host")}/reset-password`;
-    await sendPasswordResetEmail(email, token, resetUrl);
-    res.sendStatus(200);
+      const resetUrl = `${req.protocol}://${req.get("host")}/reset-password`;
+      console.log("Sending password reset email with URL:", resetUrl);
+      const emailSent = await sendPasswordResetEmail(email, token, resetUrl);
+
+      if (emailSent) {
+        console.log("Password reset email sent successfully");
+        res.sendStatus(200);
+      } else {
+        console.error("Failed to send password reset email");
+        res.status(500).send("Failed to send password reset email");
+      }
+    } catch (error) {
+      console.error("Error in forgot password flow:", error);
+      res.status(500).send("Internal server error");
+    }
   });
 
   app.post("/api/reset-password", async (req, res) => {
