@@ -1,5 +1,6 @@
 import { FC } from 'react';
 import { Link } from 'wouter';
+import { SiX } from 'react-icons/si';
 import { Coffee } from 'lucide-react';
 
 export const Footer: FC = () => {
@@ -18,22 +19,22 @@ export const Footer: FC = () => {
               Contact
             </Link>
           </div>
-          
+
           <div className="flex items-center space-x-4">
             <a
               href="https://www.buymeacoffee.com/georgipep"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors"
+              className="inline-flex items-center space-x-2 text-muted-foreground hover:text-primary hover:scale-105 transition-all"
             >
               <Coffee className="w-4 h-4" />
               <span>Buy me a coffee</span>
             </a>
-            
+
             <div className="text-muted-foreground">
               Created by{' '}
               <a
-                href="https://twitter.com/georgipep"
+                href="https://x.com/georgipep"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary hover:underline"

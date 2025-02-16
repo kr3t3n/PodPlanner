@@ -12,6 +12,7 @@ import TermsPage from "@/pages/terms-page";
 import PrivacyPage from "@/pages/privacy-page";
 import ContactPage from "@/pages/contact-page";
 import { Footer } from "@/components/ui/footer";
+import { Header } from "@/components/ui/header";
 import { ProtectedRoute } from "@/lib/protected-route";
 
 function Router() {
@@ -34,6 +35,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <div className="min-h-screen flex flex-col">
+          <Header />
           <Router />
           <Footer />
         </div>
