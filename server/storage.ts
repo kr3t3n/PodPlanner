@@ -37,6 +37,8 @@ export interface IStorage {
   addGroupMember(member: InsertGroupMember): Promise<GroupMember>;
   getGroupMembers(groupId: number): Promise<(GroupMember & { user: User })[]>;
   createEpisode(episode: InsertEpisode): Promise<Episode>;
+  updateEpisode(id: number, episode: Partial<InsertEpisode>): Promise<Episode>;
+  deleteEpisode(id: number): Promise<void>;
   getGroupEpisodes(groupId: number): Promise<Episode[]>;
   createTopic(topic: InsertTopic): Promise<Topic>;
   getGroupTopics(groupId: number): Promise<Topic[]>;
@@ -137,6 +139,22 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return episode;
+  }
+
+  async updateEpisode(id: number, updateEpisode: Partial<InsertEpisode>): Promise<Episode> {
+    const [episode] = await db
+      .update(episodes)
+      .set({
+        ...updateEpisode,
+        date: updateEpisode.date ? new Date(updateEpisode.date) : undefined,
+      })
+      .where(eq(episodes.id, id))
+      .returning();
+    return episode;
+  }
+
+  async deleteEpisode(id: number): Promise<void> {
+    await db.delete(episodes).where(eq(episodes.id, id));
   }
 
   async getGroupEpisodes(groupId: number): Promise<Episode[]> {

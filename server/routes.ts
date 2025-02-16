@@ -56,6 +56,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(episode);
   });
 
+  app.patch("/api/episodes/:id", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const episode = await storage.updateEpisode(parseInt(req.params.id), req.body);
+    res.json(episode);
+  });
+
+  app.delete("/api/episodes/:id", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    await storage.deleteEpisode(parseInt(req.params.id));
+    res.sendStatus(200);
+  });
+
   app.get("/api/groups/:id/episodes", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     const episodes = await storage.getGroupEpisodes(parseInt(req.params.id));
