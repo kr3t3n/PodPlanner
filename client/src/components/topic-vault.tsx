@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { z } from "zod";
 import { useAuth } from "@/hooks/use-auth";
+import { TopicNotes } from "./topic-notes";
 
 // Create a custom schema without groupId for the form
 const topicFormSchema = z.object({
@@ -296,13 +297,10 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
                 )}
               </DialogTitle>
             </DialogHeader>
-            {/* Placeholder for TopicNotes component - needs to be implemented separately */}
-            <div>Notes Placeholder</div>
+            <TopicNotes topicId={selectedTopic.id} currentUser={user} />
           </DialogContent>
         </Dialog>
       )}
     </div>
   );
 }
-
-// Placeholder for TopicNotes component.  This needs to be implemented separately.
