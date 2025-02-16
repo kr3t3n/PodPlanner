@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertGroupSchema, Group, GroupMember, User } from "@shared/schema";
-import { Loader2, UserPlus, Shield, UserMinus } from "lucide-react";
+import { Loader2, UserPlus, Shield, UserMinus, Pencil } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -28,6 +28,7 @@ import { useAuth } from "@/hooks/use-auth";
 
 export function GroupSettings({ groupId }: { groupId?: number }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -41,10 +42,26 @@ export function GroupSettings({ groupId }: { groupId?: number }) {
     enabled: !!groupId,
   });
 
-  const form = useForm({
+  const editForm = useForm({
     resolver: zodResolver(insertGroupSchema),
     defaultValues: {
-      name: "",
+      name: group?.name || "",
+    },
+  });
+
+  const updateGroupMutation = useMutation({
+    mutationFn: async (data: { name: string }) => {
+      const res = await apiRequest("PATCH", `/api/groups/${groupId}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/groups/${groupId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/groups"] });
+      setIsEditing(false);
+      toast({
+        title: "Group updated",
+        description: "The group name has been updated successfully",
+      });
     },
   });
 
@@ -81,6 +98,13 @@ export function GroupSettings({ groupId }: { groupId?: number }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/groups/${groupId}/members`] });
+    },
+  });
+
+  const form = useForm({
+    resolver: zodResolver(insertGroupSchema),
+    defaultValues: {
+      name: "",
     },
   });
 
@@ -152,7 +176,63 @@ export function GroupSettings({ groupId }: { groupId?: number }) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold mb-2">{group?.name}</h2>
+        {isEditing ? (
+          <Form {...editForm}>
+            <form
+              onSubmit={editForm.handleSubmit((data) =>
+                updateGroupMutation.mutate(data)
+              )}
+              className="flex items-center gap-2"
+            >
+              <FormField
+                control={editForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button
+                type="submit"
+                size="sm"
+                disabled={updateGroupMutation.isPending}
+              >
+                {updateGroupMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Save
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditing(false)}
+              >
+                Cancel
+              </Button>
+            </form>
+          </Form>
+        ) : (
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-bold">{group?.name}</h2>
+            {isAdmin && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setIsEditing(true);
+                  editForm.reset({ name: group?.name });
+                }}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        )}
         <p className="text-muted-foreground">
           Manage your group members and their roles
         </p>

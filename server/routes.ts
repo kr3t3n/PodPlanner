@@ -209,6 +209,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(group);
   });
 
+  app.patch("/api/groups/:id", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const groupId = parseInt(req.params.id);
+    const group = await storage.getGroup(groupId);
+    if (!group) return res.sendStatus(404);
+
+    // Check if user is admin
+    const members = await storage.getGroupMembers(groupId);
+    const isAdmin = members.some(m => m.userId === req.user!.id && m.isAdmin);
+    if (!isAdmin) return res.sendStatus(403);
+
+    const updatedGroup = await storage.updateGroup(groupId, {
+      name: req.body.name
+    });
+    res.json(updatedGroup);
+  });
+
   app.get("/api/groups/:id/members", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
     const members = await storage.getGroupMembers(parseInt(req.params.id));
