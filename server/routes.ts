@@ -106,7 +106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       parseInt(req.params.topicId),
       req.body.order
     );
-    res.sendStatus(200);
+    res.json({ success: true });
   });
 
   app.delete("/api/episodes/:episodeId/topics/:topicId", async (req, res) => {
@@ -115,7 +115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       parseInt(req.params.episodeId),
       parseInt(req.params.topicId)
     );
-    res.sendStatus(200);
+    res.json({ success: true });
   });
 
   app.get("/api/episodes/:id/topics", async (req, res) => {
