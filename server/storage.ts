@@ -34,7 +34,7 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   getUserGroups(userId: number): Promise<Group[]>;
-  createGroup(group: InsertGroup): Promise<Group>;
+  createGroup(group: InsertGroup, creatorUserId: number): Promise<Group>;
   getGroup(id: number): Promise<Group | undefined>;
   addGroupMember(member: InsertGroupMember): Promise<GroupMember>;
   getGroupMembers(groupId: number): Promise<(GroupMember & { user: User })[]>;
@@ -111,8 +111,16 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async createGroup(insertGroup: InsertGroup): Promise<Group> {
+  async createGroup(insertGroup: InsertGroup, creatorUserId: number): Promise<Group> {
     const [group] = await db.insert(groups).values(insertGroup).returning();
+
+    // Add the creator as an admin member
+    await db.insert(groupMembers).values({
+      userId: creatorUserId,
+      groupId: group.id,
+      isAdmin: true,
+    });
+
     return group;
   }
 

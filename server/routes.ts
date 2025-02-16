@@ -24,12 +24,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.user) return res.sendStatus(401);
     const group = await storage.createGroup({
       name: req.body.name,
-    });
-    await storage.addGroupMember({
-      groupId: group.id,
-      userId: req.user.id,
-      isAdmin: true,
-    });
+    }, req.user.id);
     res.json(group);
   });
 
