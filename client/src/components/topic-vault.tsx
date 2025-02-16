@@ -26,7 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 type TopicFormData = {
-  name?: string;
+  name: string;
   url?: string;
 };
 
@@ -52,23 +52,15 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
     mutationFn: async (data: TopicFormData) => {
       if (!groupId) throw new Error("No group selected");
 
-      // Log the raw form data
-      console.log("Raw form data:", data);
-
-      const payload = {
+      const res = await apiRequest("POST", `/api/groups/${groupId}/topics`, {
+        ...data,
         groupId,
-        name: data.name || undefined,
-        url: data.url || undefined,
-      };
+      });
 
-      // Log the processed payload
-      console.log("Sending payload:", payload);
-
-      const res = await apiRequest("POST", `/api/groups/${groupId}/topics`, payload);
       if (!res.ok) {
-        const error = await res.text();
-        throw new Error(error);
+        throw new Error("Failed to create topic");
       }
+
       return res.json();
     },
     onSuccess: () => {
@@ -90,6 +82,38 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
     },
   });
 
+  const archiveTopicMutation = useMutation({
+    mutationFn: async (topicId: number) => {
+      const res = await apiRequest("PATCH", `/api/topics/${topicId}`, {
+        isArchived: true,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/groups/${groupId}/topics`] });
+      toast({
+        title: "Success",
+        description: "Topic archived successfully",
+      });
+    },
+  });
+
+  const deleteTopicMutation = useMutation({
+    mutationFn: async (topicId: number) => {
+      const res = await apiRequest("PATCH", `/api/topics/${topicId}`, {
+        isDeleted: true,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/groups/${groupId}/topics`] });
+      toast({
+        title: "Success",
+        description: "Topic deleted successfully",
+      });
+    },
+  });
+
   if (!groupId) {
     return <div>Please select a group first</div>;
   }
@@ -102,13 +126,8 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
     );
   }
 
-  // Log form state when there are validation errors
   const onSubmit = async (data: TopicFormData) => {
     try {
-      console.log("Form state:", form.formState);
-      if (form.formState.errors) {
-        console.log("Form errors:", form.formState.errors);
-      }
       await createTopicMutation.mutateAsync(data);
     } catch (error) {
       console.error("Form submission error:", error);
@@ -166,7 +185,7 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
                     name="url"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Reference URL (optional if name provided)</FormLabel>
+                        <FormLabel>Reference URL (optional)</FormLabel>
                         <FormControl>
                           <Input {...field} type="url" placeholder="https://..." />
                         </FormControl>
