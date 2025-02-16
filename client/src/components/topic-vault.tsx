@@ -44,20 +44,44 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
     },
   });
 
+  // Log form errors whenever they change
+  console.log("Current form errors:", form.formState.errors);
+
   const createTopicMutation = useMutation({
     mutationFn: async (data: { name: string; url?: string }) => {
-      if (!groupId) throw new Error("No group selected");
-      const res = await apiRequest("POST", `/api/groups/${groupId}/topics`, {
-        ...data,
-        groupId,
-      });
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(errorText || "Failed to create topic");
+      console.log("1. Mutation started with data:", data);
+
+      if (!groupId) {
+        console.error("No group selected");
+        throw new Error("No group selected");
       }
-      return res.json();
+
+      try {
+        console.log("2. Making API request");
+        const res = await apiRequest("POST", `/api/groups/${groupId}/topics`, {
+          ...data,
+          groupId,
+          url: data.url || undefined, // Only send URL if it's not empty
+        });
+
+        console.log("3. API response status:", res.status);
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error("4. API error:", errorText);
+          throw new Error(errorText || "Failed to create topic");
+        }
+
+        const result = await res.json();
+        console.log("4. API success:", result);
+        return result;
+      } catch (error) {
+        console.error("5. API call failed:", error);
+        throw error;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("6. Mutation succeeded:", data);
       queryClient.invalidateQueries({ queryKey: [`/api/groups/${groupId}/topics`] });
       setIsDialogOpen(false);
       form.reset();
@@ -67,6 +91,7 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
       });
     },
     onError: (error: Error) => {
+      console.error("6. Mutation failed:", error);
       toast({
         title: "Failed to create topic",
         description: error.message,
@@ -74,6 +99,18 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
       });
     },
   });
+
+  const onSubmit = async (data: { name: string; url?: string }) => {
+    console.log("Form submitted with data:", data);
+    console.log("Form state:", form.formState);
+
+    try {
+      console.log("Calling mutation.mutate");
+      await createTopicMutation.mutateAsync(data);
+    } catch (error) {
+      console.error("Form submission error:", error);
+    }
+  };
 
   if (!groupId) {
     return <div>Please select a group first</div>;
@@ -112,7 +149,12 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
               </DialogHeader>
               <Form {...form}>
                 <form
-                  onSubmit={form.handleSubmit((data) => createTopicMutation.mutate(data))}
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    console.log("Form submit event triggered");
+                    const result = form.handleSubmit(onSubmit)(e);
+                    console.log("handleSubmit result:", result);
+                  }}
                   className="space-y-4"
                 >
                   <FormField
