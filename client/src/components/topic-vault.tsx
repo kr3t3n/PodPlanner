@@ -25,6 +25,11 @@ import { Loader2, Archive, Link } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { z } from "zod";
+
+// Create a custom schema without groupId for the form
+const topicFormSchema = insertTopicSchema.omit({ groupId: true });
+type TopicFormData = z.infer<typeof topicFormSchema>;
 
 export function TopicVault({ groupId }: { groupId: number | null }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -36,19 +41,16 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
     enabled: !!groupId,
   });
 
-  const form = useForm({
-    resolver: zodResolver(insertTopicSchema),
+  const form = useForm<TopicFormData>({
+    resolver: zodResolver(topicFormSchema),
     defaultValues: {
       name: "",
       url: "",
     },
   });
 
-  // Log form errors whenever they change
-  console.log("Current form errors:", form.formState.errors);
-
   const createTopicMutation = useMutation({
-    mutationFn: async (data: { name: string; url?: string }) => {
+    mutationFn: async (data: TopicFormData) => {
       console.log("1. Mutation started with data:", data);
 
       if (!groupId) {
@@ -86,8 +88,8 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
       setIsDialogOpen(false);
       form.reset();
       toast({
-        title: "Success",
-        description: "Topic created successfully",
+        title: "Topic created",
+        description: "Your new topic has been created successfully",
       });
     },
     onError: (error: Error) => {
@@ -99,18 +101,6 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
       });
     },
   });
-
-  const onSubmit = async (data: { name: string; url?: string }) => {
-    console.log("Form submitted with data:", data);
-    console.log("Form state:", form.formState);
-
-    try {
-      console.log("Calling mutation.mutate");
-      await createTopicMutation.mutateAsync(data);
-    } catch (error) {
-      console.error("Form submission error:", error);
-    }
-  };
 
   if (!groupId) {
     return <div>Please select a group first</div>;
@@ -149,12 +139,7 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
               </DialogHeader>
               <Form {...form}>
                 <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    console.log("Form submit event triggered");
-                    const result = form.handleSubmit(onSubmit)(e);
-                    console.log("handleSubmit result:", result);
-                  }}
+                  onSubmit={form.handleSubmit((data) => createTopicMutation.mutate(data))}
                   className="space-y-4"
                 >
                   <FormField
@@ -164,7 +149,7 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
                       <FormItem>
                         <FormLabel>Topic Name</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="Enter topic name" />
+                          <Input {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
