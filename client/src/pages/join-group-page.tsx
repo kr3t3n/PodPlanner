@@ -30,6 +30,7 @@ export default function JoinGroupPage() {
   const [error, setError] = useState<string | null>(null);
   const [requiresRegistration, setRequiresRegistration] = useState(false);
   const [invitedEmail, setInvitedEmail] = useState<string | null>(null);
+  const [hasCheckedInvitation, setHasCheckedInvitation] = useState(false);
 
   const form = useForm({
     resolver: zodResolver(registrationSchema),
@@ -43,14 +44,15 @@ export default function JoinGroupPage() {
   const searchParams = new URLSearchParams(window.location.search);
   const token = searchParams.get("token");
 
+  // First effect to check invitation validity and requirements
   useEffect(() => {
     if (!token) {
       setError("Invalid invitation link");
       return;
     }
 
-    const acceptInvitation = async () => {
-      if (isJoining) return;
+    const checkInvitation = async () => {
+      if (isJoining || hasCheckedInvitation) return;
 
       try {
         setIsJoining(true);
@@ -72,6 +74,7 @@ export default function JoinGroupPage() {
         if (data.requiresRegistration) {
           setInvitedEmail(data.email);
           setRequiresRegistration(true);
+          setHasCheckedInvitation(true);
           return;
         }
 
@@ -83,10 +86,33 @@ export default function JoinGroupPage() {
       }
     };
 
-    if (user || requiresRegistration) {
-      acceptInvitation();
-    }
-  }, [user, token, setLocation, requiresRegistration]);
+    checkInvitation();
+  }, [token, setLocation, hasCheckedInvitation]);
+
+  // Second effect to handle authenticated user joining
+  useEffect(() => {
+    if (!token || !user || isJoining) return;
+
+    const joinGroup = async () => {
+      try {
+        setIsJoining(true);
+        const response = await apiRequest("POST", "/api/accept-invitation", { token });
+
+        if (response.ok) {
+          setLocation("/");
+        } else {
+          const data = await response.json();
+          setError(data.message || "Failed to join group");
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to join group");
+      } finally {
+        setIsJoining(false);
+      }
+    };
+
+    joinGroup();
+  }, [user, token, setLocation]);
 
   const onSubmit = async (values: z.infer<typeof registrationSchema>) => {
     if (!token) return;
