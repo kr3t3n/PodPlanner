@@ -66,7 +66,9 @@ export class DatabaseStorage implements IStorage {
       createTableIfMissing: true,
       tableName: 'user_sessions',
       schemaName: 'public',
-      pruneSessionInterval: false
+      pruneSessionInterval: false, // Disable automatic pruning
+      errorLog: console.error.bind(console), // Add error logging
+      connectionString: process.env.DATABASE_URL // Explicitly set connection string
     });
   }
 
