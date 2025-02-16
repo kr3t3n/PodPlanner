@@ -81,6 +81,7 @@ export interface IStorage {
   getValidGroupInviteCode(code: string): Promise<(GroupInviteCode & { group: Group }) | undefined>;
   markGroupInviteCodeAsUsed(id: number): Promise<void>;
   updateGroupMember(id: number, data: { isAdmin: boolean }): Promise<GroupMember>;
+  deleteGroup(id: number): Promise<Group>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -125,7 +126,10 @@ export class DatabaseStorage implements IStorage {
       .from(groupMembers)
       .innerJoin(
         groups,
-        eq(groups.id, groupMembers.groupId)
+        and(
+          eq(groups.id, groupMembers.groupId),
+          eq(groups.isDeleted, false)  // Only return non-deleted groups
+        )
       )
       .where(eq(groupMembers.userId, userId));
 
@@ -485,6 +489,14 @@ export class DatabaseStorage implements IStorage {
       .where(eq(groupMembers.id, id))
       .returning();
     return member;
+  }
+  async deleteGroup(id: number): Promise<Group> {
+    const [group] = await db
+      .update(groups)
+      .set({ isDeleted: true })
+      .where(eq(groups.id, id))
+      .returning();
+    return group;
   }
 }
 

@@ -143,9 +143,9 @@ export default function HomePage() {
       {!groups?.length ? (
         <div className="flex flex-col items-center justify-center min-h-[400px] space-y-6">
           <div>
-            <h2 className="text-2xl font-bold text-center">Welcome to PodPlanner</h2>
+            <h2 className="text-2xl font-bold text-center">Let's create a new group 🎧</h2>
             <p className="text-muted-foreground text-center mt-2 max-w-md">
-              Create a new group to start planning your podcast episodes, or join an existing group using an invite code
+              Create a new group to start planning your podcast episodes, topics and collaborate with others.
             </p>
           </div>
           <div className="flex gap-4">

@@ -233,7 +233,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(members);
   });
 
-  // Add this route within the registerRoutes function
+  // Add delete group route
+  app.delete("/api/groups/:id", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const groupId = parseInt(req.params.id);
+
+    // Check if user is admin
+    const members = await storage.getGroupMembers(groupId);
+    const isAdmin = members.some(m => m.userId === req.user!.id && m.isAdmin);
+    if (!isAdmin) return res.sendStatus(403);
+
+    const group = await storage.deleteGroup(groupId);
+    res.json(group);
+  });
+
   app.patch("/api/groups/:groupId/members/:memberId", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 

@@ -7,6 +7,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -33,9 +35,10 @@ export function GroupSettings({ groupId }: { groupId?: number }) {
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [isInviteCodeDialogOpen, setIsInviteCodeDialogOpen] = useState(false);
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
-  const [inviteCode, setInviteCode] = useState<string | null>(null); 
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const inviteForm = useForm({
     defaultValues: {
@@ -75,7 +78,7 @@ export function GroupSettings({ groupId }: { groupId?: number }) {
       const res = await apiRequest("POST", `/api/groups/${groupId}/invite`, data);
       return res.json();
     },
-    onSuccess: (data) => { 
+    onSuccess: (data) => {
       setIsInviteDialogOpen(false);
       inviteForm.reset();
       setGeneratedCode(data.code);
@@ -200,6 +203,31 @@ export function GroupSettings({ groupId }: { groupId?: number }) {
       name: "",
     },
   });
+
+  // Add delete mutation
+  const deleteGroupMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("DELETE", `/api/groups/${groupId}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/groups"] });
+      toast({
+        title: "Group deleted",
+        description: "The group has been deleted successfully",
+      });
+      // Close the dialog
+      setIsDeleteDialogOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to delete group",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
 
   if (!groupId) {
     return (
@@ -484,6 +512,40 @@ export function GroupSettings({ groupId }: { groupId?: number }) {
                   </Button>
                 </form>
               </Form>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="destructive">
+                Delete Group
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Delete Group</DialogTitle>
+                <DialogDescription>
+                  Are you sure you want to delete this group? All associated episodes and topics will be hidden. This action cannot be undone.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button
+                  variant="ghost"
+                  onClick={() => setIsDeleteDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => deleteGroupMutation.mutate()}
+                  disabled={deleteGroupMutation.isPending}
+                >
+                  {deleteGroupMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Delete Group
+                </Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>

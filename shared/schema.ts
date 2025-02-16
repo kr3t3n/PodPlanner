@@ -30,6 +30,7 @@ export const groupInvitations = pgTable("group_invitations", {
 export const groups = pgTable("groups", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
+  isDeleted: boolean("is_deleted").notNull().default(false),
 });
 
 export const groupMembers = pgTable("group_members", {
