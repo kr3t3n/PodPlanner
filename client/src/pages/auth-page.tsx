@@ -7,18 +7,32 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertUserSchema } from "@shared/schema";
 import { Redirect } from "wouter";
 import { Loader2 } from "lucide-react";
+import { useState } from "react";
+import { z } from "zod";
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email("Invalid email address"),
+});
 
 export default function AuthPage() {
-  const { user, loginMutation, registerMutation } = useAuth();
+  const { user, loginMutation, registerMutation, forgotPasswordMutation } = useAuth();
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const loginForm = useForm({
     resolver: zodResolver(insertUserSchema.omit({ email: true })),
@@ -34,6 +48,13 @@ export default function AuthPage() {
       username: "",
       email: "",
       password: "",
+    },
+  });
+
+  const forgotPasswordForm = useForm({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: {
+      email: "",
     },
   });
 
@@ -91,6 +112,14 @@ export default function AuthPage() {
                         </FormItem>
                       )}
                     />
+                    <Button
+                      variant="link"
+                      type="button"
+                      className="px-0"
+                      onClick={() => setShowForgotPassword(true)}
+                    >
+                      Forgot password?
+                    </Button>
                     <Button
                       type="submit"
                       className="w-full"
@@ -202,6 +231,54 @@ export default function AuthPage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+          </DialogHeader>
+          <Form {...forgotPasswordForm}>
+            <form
+              onSubmit={forgotPasswordForm.handleSubmit((data) => {
+                forgotPasswordMutation.mutate(data, {
+                  onSuccess: () => {
+                    setShowForgotPassword(false);
+                    forgotPasswordForm.reset();
+                  },
+                });
+              })}
+              className="space-y-4"
+            >
+              <FormField
+                control={forgotPasswordForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Enter your email address and we'll send you a link to reset your password.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={forgotPasswordMutation.isPending}
+              >
+                {forgotPasswordMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Send Reset Link
+              </Button>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

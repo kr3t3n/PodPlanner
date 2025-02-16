@@ -15,6 +15,7 @@ type AuthContextType = {
   loginMutation: UseMutationResult<SelectUser, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
   registerMutation: UseMutationResult<SelectUser, Error, InsertUser>;
+  forgotPasswordMutation: UseMutationResult<void, Error, { email: string }>;
 };
 
 type LoginData = Pick<InsertUser, "username" | "password">;
@@ -65,12 +66,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  const forgotPasswordMutation = useMutation({
+    mutationFn: async ({ email }: { email: string }) => {
+      const res = await apiRequest("POST", "/api/forgot-password", { email });
+      if (!res.ok) throw new Error("Failed to send reset email");
+    },
+    onSuccess: () => {
+      toast({
+        title: "Reset email sent",
+        description: "If an account exists with that email, you will receive password reset instructions.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to send reset email",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const logoutMutation = useMutation({
     mutationFn: async () => {
       await apiRequest("POST", "/api/logout");
     },
     onSuccess: () => {
-      // Clear both user and groups data from the cache
       queryClient.setQueryData(["/api/user"], null);
       queryClient.invalidateQueries({ queryKey: ["/api/groups"] });
       queryClient.removeQueries({ queryKey: ["/api/groups"] });
@@ -93,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loginMutation,
         logoutMutation,
         registerMutation,
+        forgotPasswordMutation,
       }}
     >
       {children}
