@@ -5,7 +5,16 @@ if (!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_USER |
   throw new Error("SMTP configuration is incomplete. Please check environment variables.");
 }
 
-const transporter = nodemailer.createTransport({
+console.log("Setting up SMTP transporter with:", {
+  host: process.env.SMTP_HOST,
+  port: process.env.SMTP_PORT,
+  secure: process.env.SMTP_PORT === "465",
+  auth: {
+    user: process.env.SMTP_USER,
+  }
+});
+
+export const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: parseInt(process.env.SMTP_PORT),
   secure: process.env.SMTP_PORT === "465",
@@ -24,6 +33,7 @@ interface EmailOptions {
 
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
   try {
+    console.log("Attempting to send email to:", options.to);
     await transporter.sendMail({
       from: process.env.SMTP_FROM_EMAIL,
       to: options.to,
@@ -31,6 +41,7 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
       text: options.text,
       html: options.html,
     });
+    console.log("Email sent successfully to:", options.to);
     return true;
   } catch (error) {
     console.error('Email sending error:', error);
@@ -40,8 +51,9 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
 
 // Password Reset Email
 export async function sendPasswordResetEmail(email: string, resetToken: string, resetUrl: string): Promise<boolean> {
+  console.log("Sending password reset email to:", email);
   const resetLink = `${resetUrl}?token=${resetToken}`;
-  
+
   return sendEmail({
     to: email,
     subject: "Reset Your PodPlanner Password",
@@ -54,10 +66,10 @@ export async function sendPasswordResetEmail(email: string, resetToken: string, 
     `,
     text: `
       Reset Your Password
-      
+
       You requested to reset your password. Click the link below to set a new password:
       ${resetLink}
-      
+
       If you didn't request this, please ignore this email.
       This link will expire in 1 hour.
     `,
@@ -72,8 +84,9 @@ export async function sendGroupInvitationEmail(
   inviteToken: string,
   inviteUrl: string
 ): Promise<boolean> {
+  console.log("Sending group invitation email to:", email);
   const inviteLink = `${inviteUrl}?token=${inviteToken}`;
-  
+
   return sendEmail({
     to: email,
     subject: `Join ${groupName} on PodPlanner`,
@@ -86,12 +99,12 @@ export async function sendGroupInvitationEmail(
     `,
     text: `
       You're Invited to Join ${groupName}
-      
+
       ${inviterName} has invited you to join their podcast planning group "${groupName}" on PodPlanner.
-      
+
       Click the link below to accept the invitation:
       ${inviteLink}
-      
+
       This invitation will expire in 7 days.
     `,
   });
@@ -104,12 +117,13 @@ export async function sendGroupActivityEmail(
   activityType: 'new_episode' | 'topic_assigned' | 'schedule_change',
   details: string
 ): Promise<boolean> {
+  console.log("Sending group activity email to:", email);
   const subjects = {
     new_episode: `New Episode Planned - ${groupName}`,
     topic_assigned: `New Topic Assignment - ${groupName}`,
     schedule_change: `Schedule Update - ${groupName}`,
   };
-  
+
   return sendEmail({
     to: email,
     subject: subjects[activityType],
@@ -119,7 +133,7 @@ export async function sendGroupActivityEmail(
     `,
     text: `
       ${subjects[activityType]}
-      
+
       ${details}
     `,
   });
