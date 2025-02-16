@@ -77,7 +77,7 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="py-[100px] grid md:grid-cols-2">
+    <div className="py-8 md:py-[100px] grid md:grid-cols-2">
       <div className="flex items-center justify-center p-6">
         <Card className="w-full max-w-md">
           <CardHeader>
@@ -226,13 +226,13 @@ export default function AuthPage() {
           </CardContent>
         </Card>
       </div>
-      <div className="hidden md:flex flex-col justify-center p-12 bg-gradient-to-br from-primary/10 to-primary/5">
-        <h1 className="text-4xl font-bold mb-6">Organize Your Podcast</h1>
-        <p className="text-lg text-muted-foreground mb-8">
-          Plan episodes, manage topics, and collaborate with your team - all in one
-          place.
+
+      <div className="p-6 md:p-12 bg-gradient-to-br from-primary/10 to-primary/5">
+        <h1 className="text-3xl md:text-4xl font-bold mb-4 md:mb-6">Organize Your Podcast</h1>
+        <p className="text-base md:text-lg text-muted-foreground mb-6 md:mb-8">
+          Plan episodes, manage topics, and collaborate with your team - all in one place.
         </p>
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <h3 className="font-semibold mb-2">Episode Planning</h3>
             <p className="text-sm text-muted-foreground">
