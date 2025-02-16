@@ -99,9 +99,11 @@ export class DatabaseStorage implements IStorage {
       .from(groups)
       .innerJoin(
         groupMembers,
-        eq(groups.id, groupMembers.groupId)
-      )
-      .where(eq(groupMembers.userId, userId));
+        and(
+          eq(groups.id, groupMembers.groupId),
+          eq(groupMembers.userId, userId)
+        )
+      );
 
     return result.map(group => ({
       id: group.id,
