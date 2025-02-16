@@ -10,8 +10,9 @@ export const Header: FC = () => {
   return (
     <header className="border-b">
       <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-        <Link href="/" className="hover:opacity-90 transition-opacity">
-          <img src="/podplanner.png" alt="PodPlanner" className="h-8" />
+        <Link href="/" className="flex items-center gap-4 hover:opacity-90 transition-opacity">
+          <img src="/podplanner.png" alt="PodPlanner" className="h-24" />
+          <span className="text-2xl font-bold">PodPlanner</span>
         </Link>
         {user && (
           <div className="flex items-center gap-4">
