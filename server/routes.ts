@@ -18,6 +18,7 @@ import {
   transporter,
   sendTestEmail
 } from "./email";
+import { hashPassword } from './auth'; // Assuming this function exists
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
@@ -169,24 +170,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/accept-invitation", async (req, res) => {
-    if (!req.user) return res.sendStatus(401);
-    const { token } = req.body;
+    const { token, username, password } = req.body;
 
     const invitation = await storage.getValidGroupInvitation(token);
     if (!invitation) {
       return res.status(400).send("Invalid or expired invitation");
     }
 
-    // Add user to group
-    await storage.addGroupMember({
-      userId: req.user.id,
-      groupId: invitation.groupId,
-      isAdmin: false,
-    });
+    try {
+      let user = req.user;
 
-    // Mark invitation as used
-    await storage.markGroupInvitationAsUsed(invitation.id);
-    res.json(invitation.group);
+      // If not logged in, check if we need to register or just login
+      if (!user) {
+        // Check if the invited email already has an account
+        const existingUser = await storage.getUserByEmail(invitation.email);
+
+        if (existingUser) {
+          return res.status(400).json({
+            message: "Please login first",
+            email: invitation.email,
+            requiresLogin: true
+          });
+        }
+
+        // If we have username/password, create new account
+        if (username && password) {
+          const existingUsername = await storage.getUserByUsername(username);
+          if (existingUsername) {
+            return res.status(400).send("Username already exists");
+          }
+
+          // Create new user with the invitation email
+          user = await storage.createUser({
+            username,
+            password: await hashPassword(password),
+            email: invitation.email
+          });
+
+          // Log them in
+          await new Promise((resolve, reject) => {
+            req.login(user, (err) => {
+              if (err) reject(err);
+              else resolve(void 0);
+            });
+          });
+        } else {
+          return res.status(400).json({
+            message: "Registration required",
+            email: invitation.email,
+            requiresRegistration: true
+          });
+        }
+      }
+
+      // Verify the logged-in user's email matches the invitation
+      if (user.email !== invitation.email) {
+        return res.status(400).json({
+          message: "Please login with the invited email address",
+          email: invitation.email,
+          requiresLogin: true
+        });
+      }
+
+      // Add user to group
+      await storage.addGroupMember({
+        userId: user.id,
+        groupId: invitation.groupId,
+        isAdmin: false,
+      });
+
+      // Mark invitation as used
+      await storage.markGroupInvitationAsUsed(invitation.id);
+
+      res.json(invitation.group);
+    } catch (error) {
+      console.error("Error accepting invitation:", error);
+      res.status(500).send("Failed to process invitation");
+    }
   });
 
   // Group routes
