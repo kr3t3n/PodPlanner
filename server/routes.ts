@@ -15,7 +15,8 @@ import {
   sendPasswordResetEmail,
   sendGroupInvitationEmail,
   sendGroupActivityEmail,
-  transporter
+  transporter,
+  sendTestEmail
 } from "./email";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -24,45 +25,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Test email endpoint
   app.get("/api/test-email", async (req, res) => {
     try {
-      // First verify SMTP connection
-      const verifyResult = await transporter.verify();
-      console.log("SMTP Verification result:", verifyResult);
-
-      // Then try to send a test email
-      await transporter.sendMail({
-        from: process.env.SMTP_FROM_EMAIL,
-        to: "georgi@pepelyankov.com",
-        subject: "PodPlanner Test Email",
-        text: "This is a test email from PodPlanner to verify SMTP configuration.",
-        html: "<h1>PodPlanner Test Email</h1><p>This is a test email from PodPlanner to verify SMTP configuration.</p>",
-      });
-
+      // Force JSON response
       res.setHeader('Content-Type', 'application/json');
-      res.json({ 
-        success: true, 
-        message: "Test email sent successfully",
-        smtpConfig: {
-          host: process.env.SMTP_HOST,
-          port: process.env.SMTP_PORT,
-          secure: process.env.SMTP_PORT === "465",
-          user: process.env.SMTP_USER,
-          fromEmail: process.env.SMTP_FROM_EMAIL
-        }
-      });
+
+      const result = await sendTestEmail("georgi.pepelyankov@gmail.com");
+
+      if (result.success) {
+        res.json({ 
+          success: true, 
+          message: "Test email sent successfully",
+          config: {
+            host: process.env.SMTP_HOST,
+            port: process.env.SMTP_PORT,
+            secure: process.env.SMTP_PORT === "465",
+            user: process.env.SMTP_USER,
+            fromEmail: process.env.SMTP_FROM_EMAIL
+          }
+        });
+      } else {
+        res.status(500).json({ 
+          success: false, 
+          error: result.error,
+          config: {
+            host: process.env.SMTP_HOST,
+            port: process.env.SMTP_PORT,
+            secure: process.env.SMTP_PORT === "465",
+            user: process.env.SMTP_USER,
+            fromEmail: process.env.SMTP_FROM_EMAIL
+          }
+        });
+      }
     } catch (error) {
       console.error("Test email error:", error);
-      res.setHeader('Content-Type', 'application/json');
       res.status(500).json({ 
         success: false, 
-        error: error instanceof Error ? error.message : String(error),
-        details: error instanceof Error ? error.stack : String(error),
-        smtpConfig: {
-          host: process.env.SMTP_HOST,
-          port: process.env.SMTP_PORT,
-          secure: process.env.SMTP_PORT === "465",
-          user: process.env.SMTP_USER,
-          fromEmail: process.env.SMTP_FROM_EMAIL
-        }
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   });

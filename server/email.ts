@@ -1,28 +1,82 @@
 import nodemailer from 'nodemailer';
 
-if (!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_USER || 
-    !process.env.SMTP_PASS || !process.env.SMTP_FROM_EMAIL) {
-  throw new Error("SMTP configuration is incomplete. Please check environment variables.");
+// Initialize transporter only when credentials are available
+let transporter: nodemailer.Transporter | null = null;
+
+export async function initializeTransporter() {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_USER || 
+      !process.env.SMTP_PASS || !process.env.SMTP_FROM_EMAIL) {
+    console.error("Missing SMTP configuration. Please check environment variables.");
+    return false;
+  }
+
+  try {
+    const port = parseInt(process.env.SMTP_PORT);
+    console.log("Creating SMTP transporter with config:", {
+      host: process.env.SMTP_HOST,
+      port,
+      secure: false, // For port 587, use TLS
+      auth: {
+        user: process.env.SMTP_USER
+      }
+    });
+
+    transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port,
+      secure: false, // For port 587, use TLS
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+      },
+      tls: {
+        // Do not fail on invalid certs
+        rejectUnauthorized: false
+      }
+    });
+
+    // Verify connection
+    console.log("Verifying SMTP connection...");
+    await transporter.verify();
+    console.log("SMTP connection verified successfully!");
+    return true;
+  } catch (error) {
+    console.error("Failed to initialize SMTP transporter:", error);
+    return false;
+  }
 }
 
-console.log("Setting up SMTP transporter with:", {
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  secure: process.env.SMTP_PORT === "465",
-  auth: {
-    user: process.env.SMTP_USER,
+export async function sendTestEmail(to: string): Promise<{ success: boolean, error?: string }> {
+  if (!transporter) {
+    const initialized = await initializeTransporter();
+    if (!initialized) {
+      return { 
+        success: false, 
+        error: "Failed to initialize SMTP transporter" 
+      };
+    }
   }
-});
 
-export const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT),
-  secure: process.env.SMTP_PORT === "465",
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+  try {
+    console.log(`Attempting to send test email to: ${to}`);
+    const info = await transporter!.sendMail({
+      from: process.env.SMTP_FROM_EMAIL,
+      to,
+      subject: "PodPlanner Test Email",
+      text: "This is a test email from PodPlanner to verify SMTP configuration.",
+      html: "<h1>PodPlanner Test Email</h1><p>This is a test email from PodPlanner to verify SMTP configuration.</p>"
+    });
+
+    console.log("Email sent successfully:", info);
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to send test email:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
 
 interface EmailOptions {
   to: string;
@@ -32,9 +86,13 @@ interface EmailOptions {
 }
 
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
+  if (!transporter) {
+    const initialized = await initializeTransporter();
+    if (!initialized) return false;
+  }
   try {
     console.log("Attempting to send email to:", options.to);
-    await transporter.sendMail({
+    await transporter!.sendMail({
       from: process.env.SMTP_FROM_EMAIL,
       to: options.to,
       subject: options.subject,
@@ -139,7 +197,11 @@ export async function sendGroupActivityEmail(
   });
 }
 
-// Verify SMTP connection on startup
-transporter.verify()
-  .then(() => console.log('SMTP connection verified'))
-  .catch((error) => console.error('SMTP connection error:', error));
+// Initialize on startup
+initializeTransporter().then(success => {
+  if (success) {
+    console.log("SMTP service initialized successfully");
+  } else {
+    console.error("Failed to initialize SMTP service");
+  }
+});
