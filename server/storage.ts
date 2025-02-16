@@ -51,6 +51,7 @@ export class DatabaseStorage implements IStorage {
     this.sessionStore = new PostgresSessionStore({
       pool,
       createTableIfMissing: true,
+      tableName: 'user_sessions'  // Use a different table name to avoid conflicts
     });
   }
 
@@ -78,11 +79,17 @@ export class DatabaseStorage implements IStorage {
         id: groups.id,
         name: groups.name,
       })
-      .from(groupMembers)
-      .innerJoin(groups, eq(groupMembers.groupId, groups.id))
+      .from(groups)
+      .innerJoin(
+        groupMembers,
+        eq(groups.id, groupMembers.groupId)
+      )
       .where(eq(groupMembers.userId, userId));
 
-    return result;
+    return result.map(group => ({
+      id: group.id,
+      name: group.name
+    }));
   }
 
   async createGroup(insertGroup: InsertGroup): Promise<Group> {
@@ -98,7 +105,7 @@ export class DatabaseStorage implements IStorage {
   async addGroupMember(insertMember: InsertGroupMember): Promise<GroupMember> {
     const [member] = await db
       .insert(groupMembers)
-      .values({ ...insertMember, isAdmin: insertMember.isAdmin ?? false })
+      .values(insertMember)
       .returning();
     return member;
   }
@@ -120,11 +127,7 @@ export class DatabaseStorage implements IStorage {
   async createEpisode(insertEpisode: InsertEpisode): Promise<Episode> {
     const [episode] = await db
       .insert(episodes)
-      .values({
-        ...insertEpisode,
-        status: insertEpisode.status ?? "draft",
-        repeatPattern: insertEpisode.repeatPattern ?? null,
-      })
+      .values(insertEpisode)
       .returning();
     return episode;
   }

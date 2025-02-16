@@ -30,8 +30,7 @@ export default function HomePage() {
   });
 
   useEffect(() => {
-    // Set the first group as selected when groups are loaded
-    if (groups?.length && !selectedGroup) {
+    if (groups && groups.length > 0 && selectedGroup === null) {
       setSelectedGroup(groups[0].id);
     }
   }, [groups, selectedGroup]);
@@ -75,8 +74,8 @@ export default function HomePage() {
           <div className="space-y-6">
             <div className="flex items-center gap-4">
               <Select
-                value={selectedGroup?.toString() || ""}
-                onValueChange={(value) => setSelectedGroup(parseInt(value))}
+                value={selectedGroup?.toString() ?? ""}
+                onValueChange={(value) => setSelectedGroup(Number(value))}
               >
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Select a group" />
