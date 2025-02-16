@@ -23,6 +23,7 @@ import { Loader2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { EpisodeTopics } from "@/components/episode-topics";
 
 export function CalendarView({ groupId }: { groupId: number | null }) {
   const [selected, setSelected] = useState<Date>();
@@ -208,63 +209,71 @@ export function CalendarView({ groupId }: { groupId: number | null }) {
         />
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-4">
         {episodes?.map((episode) => (
           <div
             key={episode.id}
-            className="flex items-center justify-between p-4 border rounded-lg"
+            className="border rounded-lg overflow-hidden"
           >
-            <div>
-              <h3 className="font-medium">{episode.title}</h3>
-              <p className="text-sm text-muted-foreground">
-                {format(new Date(episode.date), "PPP")}
-              </p>
-              <div className="mt-1">
-                <Select
-                  value={episode.status}
-                  onValueChange={(value: EpisodeStatus) =>
-                    updateEpisodeMutation.mutate({
-                      id: episode.id,
-                      status: value,
-                    })
-                  }
+            <div className="flex items-center justify-between p-4 bg-muted/50">
+              <div>
+                <h3 className="font-medium">{episode.title}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {format(new Date(episode.date), "PPP")}
+                </p>
+                <div className="mt-1">
+                  <Select
+                    value={episode.status}
+                    onValueChange={(value: EpisodeStatus) =>
+                      updateEpisodeMutation.mutate({
+                        id: episode.id,
+                        status: value,
+                      })
+                    }
+                  >
+                    <SelectTrigger className="w-[120px] h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {episodeStatuses.filter(s => s !== "deleted").map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {status.charAt(0).toUpperCase() + status.slice(1)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    setEditingEpisode(episode);
+                    setSelected(new Date(episode.date));
+                    setIsDialogOpen(true);
+                  }}
                 >
-                  <SelectTrigger className="w-[120px] h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {episodeStatuses.filter(s => s !== "deleted").map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {status.charAt(0).toUpperCase() + status.slice(1)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  Edit
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={() => deleteEpisodeMutation.mutate(episode.id)}
+                  disabled={deleteEpisodeMutation.isPending}
+                >
+                  {deleteEpisodeMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Delete
+                </Button>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => {
-                  setEditingEpisode(episode);
-                  setSelected(new Date(episode.date));
-                  setIsDialogOpen(true);
-                }}
-              >
-                Edit
-              </Button>
-              <Button 
-                variant="destructive" 
-                size="sm"
-                onClick={() => deleteEpisodeMutation.mutate(episode.id)}
-                disabled={deleteEpisodeMutation.isPending}
-              >
-                {deleteEpisodeMutation.isPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Delete
-              </Button>
+            <div className="p-4 border-t bg-background">
+              <EpisodeTopics 
+                episodeId={episode.id} 
+                groupId={groupId}
+              />
             </div>
           </div>
         ))}

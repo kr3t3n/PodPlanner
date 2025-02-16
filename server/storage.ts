@@ -11,12 +11,14 @@ import {
   type InsertTopic,
   type TopicComment,
   type InsertTopicComment,
+  type EpisodeTopic,
   users,
   groups,
   groupMembers,
   episodes,
   topics,
   topicComments,
+  episodeTopics,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, not } from "drizzle-orm";
@@ -212,9 +214,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getEpisodeTopics(episodeId: number): Promise<(Topic & { order: number })[]> {
-    return await db
+    const result = await db
       .select({
-        ...topics,
+        id: topics.id,
+        groupId: topics.groupId,
+        name: topics.name,
+        url: topics.url,
+        isArchived: topics.isArchived,
+        isDeleted: topics.isDeleted,
         order: episodeTopics.order,
       })
       .from(topics)
@@ -226,6 +233,7 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .orderBy(episodeTopics.order);
+    return result;
   }
 
   async addTopicToEpisode(episodeId: number, topicId: number, order: number): Promise<void> {
