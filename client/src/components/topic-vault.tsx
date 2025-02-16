@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -25,14 +26,16 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-type TopicFormData = z.infer<typeof insertTopicSchema>;
+type TopicFormData = {
+  name: string;
+  url?: string;
+};
 
 export function TopicVault({ groupId }: { groupId: number | null }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const { toast } = useToast();
 
-  // Restore topics query
   const { data: topics, isLoading } = useQuery<Topic[]>({
     queryKey: [`/api/groups/${groupId}/topics`],
     enabled: !!groupId,
@@ -48,28 +51,25 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
 
   const createTopicMutation = useMutation({
     mutationFn: async (data: TopicFormData) => {
-      console.log("Creating topic with data:", data);
       if (!groupId) throw new Error("No group selected");
 
-      const res = await apiRequest("POST", `/api/groups/${groupId}/topics`, {
-        ...data,
+      // Clean the data before sending
+      const payload = {
+        name: data.name,
+        url: data.url || undefined, // Only send url if it's not empty
         groupId,
-      });
+      };
 
-      console.log("API Response status:", res.status);
+      const res = await apiRequest("POST", `/api/groups/${groupId}/topics`, payload);
 
       if (!res.ok) {
         const errorText = await res.text();
-        console.error("API Error:", errorText);
         throw new Error(errorText || "Failed to create topic");
       }
 
-      const result = await res.json();
-      console.log("API Response data:", result);
-      return result;
+      return res.json();
     },
-    onSuccess: (data) => {
-      console.log("Topic created successfully:", data);
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/groups/${groupId}/topics`] });
       setIsDialogOpen(false);
       form.reset();
@@ -87,6 +87,10 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
       });
     },
   });
+
+  const onSubmit = (data: TopicFormData) => {
+    createTopicMutation.mutate(data);
+  };
 
   const archiveTopicMutation = useMutation({
     mutationFn: async (topicId: number) => {
@@ -132,16 +136,6 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
     );
   }
 
-  const onSubmit = async (data: TopicFormData) => {
-    console.log("Form submitted with data:", data);
-    console.log("Form errors:", form.formState.errors);
-
-    try {
-      await createTopicMutation.mutateAsync(data);
-    } catch (error) {
-      console.error("Form submission error:", error);
-    }
-  };
 
   return (
     <div className="space-y-4">
@@ -155,28 +149,20 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
             {showArchived ? "Show Active" : "Show Archived"}
             <Archive className="ml-2 h-4 w-4" />
           </Button>
-          <Dialog
-            open={isDialogOpen}
-            onOpenChange={(open) => {
-              setIsDialogOpen(open);
-              if (!open) {
-                form.reset();
-              }
-            }}
-          >
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button>New Topic</Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>✨ Add New Topic</DialogTitle>
+                <DialogTitle>Add New Topic</DialogTitle>
+                <DialogDescription>
+                  Create a new topic for your podcast. Add a name and optionally a reference URL.
+                </DialogDescription>
               </DialogHeader>
               <Form {...form}>
                 <form
-                  onSubmit={(e) => {
-                    console.log("Form submission started");
-                    form.handleSubmit(onSubmit)(e);
-                  }}
+                  onSubmit={form.handleSubmit(onSubmit)}
                   className="space-y-4"
                 >
                   <FormField
