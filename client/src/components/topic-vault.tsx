@@ -52,20 +52,24 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
     mutationFn: async (data: TopicFormData) => {
       if (!groupId) throw new Error("No group selected");
 
+      // Log the raw form data
+      console.log("Raw form data:", data);
+
       const payload = {
-        ...data,
-        name: data.name || data.url,
         groupId,
+        name: data.name || undefined,
+        url: data.url || undefined,
       };
 
-      console.log("Creating topic with payload:", payload);
+      // Log the processed payload
+      console.log("Sending payload:", payload);
 
       const res = await apiRequest("POST", `/api/groups/${groupId}/topics`, payload);
       if (!res.ok) {
         const error = await res.text();
         throw new Error(error);
       }
-      return await res.json();
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/groups/${groupId}/topics`] });
@@ -86,42 +90,6 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
     },
   });
 
-  const archiveTopicMutation = useMutation({
-    mutationFn: async (topicId: number) => {
-      const res = await apiRequest(
-        "PATCH",
-        `/api/topics/${topicId}`,
-        { isArchived: true }
-      );
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/groups/${groupId}/topics`] });
-      toast({
-        title: "Topic archived",
-        description: "Topic has been moved to the archive",
-      });
-    },
-  });
-
-  const deleteTopicMutation = useMutation({
-    mutationFn: async (topicId: number) => {
-      const res = await apiRequest(
-        "PATCH",
-        `/api/topics/${topicId}`,
-        { isDeleted: true }
-      );
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/groups/${groupId}/topics`] });
-      toast({
-        title: "Topic deleted",
-        description: "Topic has been moved to deleted status",
-      });
-    },
-  });
-
   if (!groupId) {
     return <div>Please select a group first</div>;
   }
@@ -133,6 +101,19 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
       </div>
     );
   }
+
+  // Log form state when there are validation errors
+  const onSubmit = async (data: TopicFormData) => {
+    try {
+      console.log("Form state:", form.formState);
+      if (form.formState.errors) {
+        console.log("Form errors:", form.formState.errors);
+      }
+      await createTopicMutation.mutateAsync(data);
+    } catch (error) {
+      console.error("Form submission error:", error);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -164,10 +145,7 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
               </DialogHeader>
               <Form {...form}>
                 <form
-                  onSubmit={form.handleSubmit((data) => {
-                    console.log("Form submitted with data:", data);
-                    createTopicMutation.mutate(data);
-                  })}
+                  onSubmit={form.handleSubmit(onSubmit)}
                   className="space-y-4"
                 >
                   <FormField
@@ -190,14 +168,7 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
                       <FormItem>
                         <FormLabel>Reference URL (optional if name provided)</FormLabel>
                         <FormControl>
-                          <Input 
-                            {...field} 
-                            type="url" 
-                            placeholder="https://..."
-                            onChange={(e) => {
-                              field.onChange(e.target.value || undefined);
-                            }}
-                          />
+                          <Input {...field} type="url" placeholder="https://..." />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
