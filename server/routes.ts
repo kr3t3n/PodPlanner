@@ -171,13 +171,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/invitations/:token", async (req, res) => {
     try {
+      console.log(`Checking invitation token: ${req.params.token}`);
       const invitation = await storage.getValidGroupInvitation(req.params.token);
+
       if (!invitation) {
+        console.log('No valid invitation found');
         return res.status(400).json({ message: "Invalid or expired invitation" });
       }
 
+      console.log('Found invitation:', {
+        email: invitation.email,
+        groupId: invitation.groupId,
+        groupName: invitation.group.name
+      });
+
       // Check if this email already has an account
       const existingUser = await storage.getUserByEmail(invitation.email);
+      console.log('Existing user check:', existingUser ? 'Found user' : 'No user found');
 
       return res.json({
         email: invitation.email,
@@ -187,19 +197,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error checking invitation:", error);
-      res.status(500).send("Failed to verify invitation");
+      res.status(500).json({ message: "Failed to verify invitation" });
     }
   });
 
   app.post("/api/accept-invitation", async (req, res) => {
-    const { token, username, password } = req.body;
-
-    const invitation = await storage.getValidGroupInvitation(token);
-    if (!invitation) {
-      return res.status(400).json({ message: "Invalid or expired invitation" });
-    }
-
     try {
+      console.log('Accept invitation request:', {
+        token: req.body.token,
+        hasUsername: !!req.body.username,
+        hasPassword: !!req.body.password,
+        isAuthenticated: !!req.user
+      });
+
+      const invitation = await storage.getValidGroupInvitation(req.body.token);
+      if (!invitation) {
+        console.log('No valid invitation found during acceptance');
+        return res.status(400).json({ message: "Invalid or expired invitation" });
+      }
+
+      console.log('Found valid invitation:', {
+        email: invitation.email,
+        groupId: invitation.groupId
+      });
+
       let user = req.user;
 
       // If not logged in, check if we need to register or just login
@@ -208,6 +229,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const existingUser = await storage.getUserByEmail(invitation.email);
 
         if (existingUser) {
+          console.log('User needs to login first:', invitation.email);
           return res.status(400).json({
             message: "Please login first",
             email: invitation.email,
@@ -216,8 +238,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // If we have username/password, create new account
-        if (username && password) {
-          const existingUsername = await storage.getUserByUsername(username);
+        if (req.body.username && req.body.password) {
+          console.log('Creating new user account for:', invitation.email);
+          const existingUsername = await storage.getUserByUsername(req.body.username);
           if (existingUsername) {
             return res.status(400).json({ 
               message: "Username already exists",
@@ -227,8 +250,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Create new user with the invitation email
           user = await storage.createUser({
-            username,
-            password: await hashPassword(password),
+            username: req.body.username,
+            password: await hashPassword(req.body.password),
             email: invitation.email
           });
 
@@ -240,6 +263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           });
         } else {
+          console.log('Registration required for:', invitation.email);
           return res.status(400).json({
             message: "Registration required",
             email: invitation.email,
@@ -250,12 +274,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify the logged-in user's email matches the invitation
       if (user.email !== invitation.email) {
+        console.log('Email mismatch:', {
+          userEmail: user.email,
+          invitationEmail: invitation.email
+        });
         return res.status(400).json({
           message: "Please login with the invited email address",
           email: invitation.email,
           requiresLogin: true
         });
       }
+
+      console.log('Adding user to group:', {
+        userId: user.id,
+        groupId: invitation.groupId
+      });
 
       // Add user to group
       await storage.addGroupMember({
@@ -267,6 +300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Mark invitation as used
       await storage.markGroupInvitationAsUsed(invitation.id);
 
+      console.log('Successfully added user to group');
       res.json(invitation.group);
     } catch (error) {
       console.error("Error accepting invitation:", error);

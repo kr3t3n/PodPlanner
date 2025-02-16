@@ -42,7 +42,7 @@ export default function JoinGroupPage() {
   const searchParams = new URLSearchParams(window.location.search);
   const token = searchParams.get("token");
 
-  // First effect to check invitation validity and requirements
+  // Effect to check invitation and handle the flow
   useEffect(() => {
     if (!token) {
       setError("Invalid invitation link");
@@ -76,7 +76,7 @@ export default function JoinGroupPage() {
           return;
         }
 
-        // If we're here, we're logged in with the correct email
+        // If we're here, we can try to accept the invitation
         await acceptInvitation();
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to verify invitation");
@@ -89,6 +89,8 @@ export default function JoinGroupPage() {
   }, [token, user]);
 
   const acceptInvitation = async () => {
+    if (!token) return;
+
     try {
       setIsLoading(true);
       const response = await apiRequest("POST", "/api/accept-invitation", { token });

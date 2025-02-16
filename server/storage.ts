@@ -418,10 +418,13 @@ export class DatabaseStorage implements IStorage {
           gt(groupInvitations.expiresAt, new Date())
         )
       );
+
+    console.log('Retrieved invitation:', invitation); // Add logging
     return invitation;
   }
 
   async markGroupInvitationAsUsed(id: number): Promise<void> {
+    console.log('Marking invitation as used:', id); // Add logging
     await db
       .update(groupInvitations)
       .set({ used: true })
