@@ -9,6 +9,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -49,7 +50,20 @@ export default function HomePage() {
   const { user, logoutMutation } = useAuth();
   const [selectedGroup, setSelectedGroup] = useState<number | null>(null);
   const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false); //Added for Create Group Dialog
   const { toast } = useToast();
+
+  // Get invite code from URL if present
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const inviteCode = params.get('code');
+    if (inviteCode) {
+      setIsJoinDialogOpen(true);
+      joinForm.setValue('code', inviteCode);
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
 
   const joinForm = useForm({
     resolver: zodResolver(joinGroupSchema),
@@ -125,7 +139,69 @@ export default function HomePage() {
 
       <main className="container mx-auto px-4 py-8">
         {!groups?.length ? (
-          <GroupSettings />
+          <div className="flex flex-col items-center justify-center min-h-[400px] space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold text-center">Welcome to PodPlanner</h2>
+              <p className="text-muted-foreground text-center mt-2 max-w-md">
+                Create a new group to start planning your podcast episodes, or join an existing group using an invite code
+              </p>
+            </div>
+            <div className="flex gap-4">
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="lg">Create New Group</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create Group</DialogTitle>
+                  </DialogHeader>
+                  {/* Add Create Group Form Here */}
+                </DialogContent>
+              </Dialog>
+              <Dialog open={isJoinDialogOpen} onOpenChange={setIsJoinDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="lg">Join Existing Group</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Join Group</DialogTitle>
+                  </DialogHeader>
+                  <Form {...joinForm}>
+                    <form
+                      onSubmit={joinForm.handleSubmit((data) =>
+                        joinGroupMutation.mutate(data)
+                      )}
+                      className="space-y-4"
+                    >
+                      <FormField
+                        control={joinForm.control}
+                        name="code"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Invite Code</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Enter invite code" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button
+                        type="submit"
+                        className="w-full"
+                        disabled={joinGroupMutation.isPending}
+                      >
+                        {joinGroupMutation.isPending && (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        Join Group
+                      </Button>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
         ) : (
           <div className="space-y-6">
             <div className="flex items-center gap-4">

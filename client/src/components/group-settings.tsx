@@ -67,6 +67,8 @@ export function GroupSettings({ groupId }: { groupId?: number }) {
     },
   });
 
+  const inviteLink = generatedCode ? `${window.location.origin}/auth?redirect=/?code=${generatedCode}` : '';
+
   const inviteMutation = useMutation({
     mutationFn: async (data: { email: string }) => {
       const res = await apiRequest("POST", `/api/groups/${groupId}/invite`, data);
@@ -341,26 +343,46 @@ export function GroupSettings({ groupId }: { groupId?: number }) {
                 <DialogTitle>Invite Code Generated</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <div className="p-4 bg-muted rounded-lg text-center">
-                  <code className="text-lg font-mono">{generatedCode}</code>
+                <div className="space-y-2">
+                  <div className="p-4 bg-muted rounded-lg text-center">
+                    <code className="text-lg font-mono">{generatedCode}</code>
+                  </div>
+                  <div className="p-4 bg-muted rounded-lg text-sm break-all">
+                    <p className="font-medium mb-1">Or share this link:</p>
+                    <code>{inviteLink}</code>
+                  </div>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Share this code with others to let them join the group. The code will expire in 7 days.
+                  Share this code or link with others to let them join the group. The code will expire in 7 days.
                 </p>
-                <Button
-                  className="w-full"
-                  onClick={() => {
-                    if (generatedCode) {
-                      navigator.clipboard.writeText(generatedCode);
+                <div className="flex gap-2">
+                  <Button
+                    className="flex-1"
+                    onClick={() => {
+                      if (generatedCode) {
+                        navigator.clipboard.writeText(generatedCode);
+                        toast({
+                          title: "Copied to clipboard",
+                          description: "The invite code has been copied to your clipboard",
+                        });
+                      }
+                    }}
+                  >
+                    Copy Code
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={() => {
+                      navigator.clipboard.writeText(inviteLink);
                       toast({
                         title: "Copied to clipboard",
-                        description: "The invite code has been copied to your clipboard",
+                        description: "The invite link has been copied to your clipboard",
                       });
-                    }
-                  }}
-                >
-                  Copy to Clipboard
-                </Button>
+                    }}
+                  >
+                    Copy Link
+                  </Button>
+                </div>
               </div>
             </DialogContent>
           </Dialog>
