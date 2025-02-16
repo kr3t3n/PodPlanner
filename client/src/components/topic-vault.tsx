@@ -25,16 +25,14 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-type TopicFormData = {
-  name: string;
-  url?: string;
-};
+type TopicFormData = z.infer<typeof insertTopicSchema>;
 
 export function TopicVault({ groupId }: { groupId: number | null }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const { toast } = useToast();
 
+  // Restore topics query
   const { data: topics, isLoading } = useQuery<Topic[]>({
     queryKey: [`/api/groups/${groupId}/topics`],
     enabled: !!groupId,
@@ -50,6 +48,7 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
 
   const createTopicMutation = useMutation({
     mutationFn: async (data: TopicFormData) => {
+      console.log("Creating topic with data:", data);
       if (!groupId) throw new Error("No group selected");
 
       const res = await apiRequest("POST", `/api/groups/${groupId}/topics`, {
@@ -57,13 +56,20 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
         groupId,
       });
 
+      console.log("API Response status:", res.status);
+
       if (!res.ok) {
-        throw new Error("Failed to create topic");
+        const errorText = await res.text();
+        console.error("API Error:", errorText);
+        throw new Error(errorText || "Failed to create topic");
       }
 
-      return res.json();
+      const result = await res.json();
+      console.log("API Response data:", result);
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Topic created successfully:", data);
       queryClient.invalidateQueries({ queryKey: [`/api/groups/${groupId}/topics`] });
       setIsDialogOpen(false);
       form.reset();
@@ -127,6 +133,9 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
   }
 
   const onSubmit = async (data: TopicFormData) => {
+    console.log("Form submitted with data:", data);
+    console.log("Form errors:", form.formState.errors);
+
     try {
       await createTopicMutation.mutateAsync(data);
     } catch (error) {
@@ -146,8 +155,8 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
             {showArchived ? "Show Active" : "Show Archived"}
             <Archive className="ml-2 h-4 w-4" />
           </Button>
-          <Dialog 
-            open={isDialogOpen} 
+          <Dialog
+            open={isDialogOpen}
             onOpenChange={(open) => {
               setIsDialogOpen(open);
               if (!open) {
@@ -164,7 +173,10 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
               </DialogHeader>
               <Form {...form}>
                 <form
-                  onSubmit={form.handleSubmit(onSubmit)}
+                  onSubmit={(e) => {
+                    console.log("Form submission started");
+                    form.handleSubmit(onSubmit)(e);
+                  }}
                   className="space-y-4"
                 >
                   <FormField
