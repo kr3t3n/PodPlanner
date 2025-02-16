@@ -43,7 +43,10 @@ export const topicComments = pgTable("topic_comments", {
   topicId: integer("topic_id").notNull().references(() => topics.id),
   userId: integer("user_id").notNull().references(() => users.id),
   content: text("content").notNull(),
-});
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => ({
+  uniqUserTopic: unique().on(table.userId, table.topicId),
+}));
 
 export const episodeTopics = pgTable("episode_topics", {
   id: serial("id").primaryKey(),
@@ -77,7 +80,9 @@ export const insertTopicSchema = createInsertSchema(topics).extend({
 export type InsertTopic = z.infer<typeof insertTopicSchema>;
 export type Topic = typeof topics.$inferSelect;
 
-export const insertTopicCommentSchema = createInsertSchema(topicComments);
+export const insertTopicCommentSchema = createInsertSchema(topicComments, {
+  content: z.string().min(1, "Note content is required"),
+}).omit({ updatedAt: true });
 export type InsertTopicComment = z.infer<typeof insertTopicCommentSchema>;
 export type TopicComment = typeof topicComments.$inferSelect;
 

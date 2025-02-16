@@ -21,7 +21,7 @@ import {
   episodeTopics,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, not } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -46,6 +46,7 @@ export interface IStorage {
   getGroupTopics(groupId: number): Promise<Topic[]>;
   createTopicComment(comment: InsertTopicComment): Promise<TopicComment>;
   getTopicComments(topicId: number): Promise<TopicComment[]>;
+  getTopicCommentsWithUsers(topicId: number): Promise<(TopicComment & { user: User })[]>;
   updateTopic(
     id: number,
     updateData: Partial<InsertTopic> & { isArchived?: boolean; isDeleted?: boolean }
@@ -53,6 +54,7 @@ export interface IStorage {
   getEpisodeTopics(episodeId: number): Promise<(Topic & { order: number })[]>;
   addTopicToEpisode(episodeId: number, topicId: number, order: number): Promise<void>;
   removeTopicFromEpisode(episodeId: number, topicId: number): Promise<void>;
+  upsertTopicComment(comment: InsertTopicComment): Promise<TopicComment>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -270,6 +272,39 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(topicComments)
       .where(eq(topicComments.topicId, topicId));
+  }
+
+  async getTopicCommentsWithUsers(topicId: number): Promise<(TopicComment & { user: User })[]> {
+    return await db
+      .select({
+        id: topicComments.id,
+        topicId: topicComments.topicId,
+        userId: topicComments.userId,
+        content: topicComments.content,
+        updatedAt: topicComments.updatedAt,
+        user: users,
+      })
+      .from(topicComments)
+      .innerJoin(users, eq(topicComments.userId, users.id))
+      .where(eq(topicComments.topicId, topicId));
+  }
+
+  async upsertTopicComment(insertComment: InsertTopicComment): Promise<TopicComment> {
+    const [comment] = await db
+      .insert(topicComments)
+      .values({
+        ...insertComment,
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: [topicComments.userId, topicComments.topicId],
+        set: {
+          content: insertComment.content,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return comment;
   }
 }
 

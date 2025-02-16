@@ -25,6 +25,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { z } from "zod";
+import { useAuth } from "@/hooks/use-auth";
 
 // Create a custom schema without groupId for the form
 const topicFormSchema = z.object({
@@ -39,7 +40,9 @@ type TopicFormData = z.infer<typeof topicFormSchema>;
 export function TopicVault({ groupId }: { groupId: number | null }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const { data: topics, isLoading } = useQuery<Topic[]>({
     queryKey: [`/api/groups/${groupId}/topics`],
@@ -138,6 +141,11 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
     },
   });
 
+  // Add handler for topic selection
+  const handleTopicClick = (topic: Topic) => {
+    setSelectedTopic(topic);
+  };
+
   if (!groupId) {
     return <div>Please select a group first</div>;
   }
@@ -218,7 +226,11 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
       <ScrollArea className="h-[600px] rounded-md border p-4">
         <div className="space-y-4">
           {topics?.filter((t) => t.isArchived === showArchived && !t.isDeleted).map((topic) => (
-            <div key={topic.id} className="p-4 border rounded-lg space-y-2">
+            <div
+              key={topic.id}
+              className="p-4 border rounded-lg space-y-2 hover:bg-accent/50 cursor-pointer"
+              onClick={() => handleTopicClick(topic)}
+            >
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="font-medium">{topic.name}</h3>
@@ -229,6 +241,7 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm text-blue-500 hover:underline flex items-center gap-1"
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <Link className="h-4 w-4" />
                         {topic.url}
@@ -237,10 +250,24 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => handleArchive(topic.id, topic.isArchived)}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleArchive(topic.id, topic.isArchived);
+                    }}
+                  >
                     <Archive className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(topic.id)}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(topic.id);
+                    }}
+                  >
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
@@ -249,6 +276,33 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
           ))}
         </div>
       </ScrollArea>
+
+      {selectedTopic && user && (
+        <Dialog open={!!selectedTopic} onOpenChange={() => setSelectedTopic(null)}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <span>{selectedTopic.name}</span>
+                {selectedTopic.url && (
+                  <a
+                    href={selectedTopic.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-500 hover:underline flex items-center gap-1"
+                  >
+                    <Link className="h-4 w-4" />
+                    View Reference
+                  </a>
+                )}
+              </DialogTitle>
+            </DialogHeader>
+            {/* Placeholder for TopicNotes component - needs to be implemented separately */}
+            <div>Notes Placeholder</div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
+
+// Placeholder for TopicNotes component.  This needs to be implemented separately.

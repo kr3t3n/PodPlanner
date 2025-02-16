@@ -135,14 +135,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Topic comment routes (only one instance needed)
+  app.get("/api/topics/:id/comments", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const comments = await storage.getTopicCommentsWithUsers(parseInt(req.params.id));
+    res.json(comments);
+  });
+
   app.post("/api/topics/:id/comments", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
-    const comment = await storage.createTopicComment({
-      topicId: parseInt(req.params.id),
-      userId: req.user.id,
-      content: req.body.content,
-    });
-    res.json(comment);
+    try {
+      const comment = await storage.upsertTopicComment({
+        topicId: parseInt(req.params.id),
+        userId: req.user.id,
+        content: req.body.content,
+      });
+      res.json(comment);
+    } catch (error) {
+      console.error("Error saving topic comment:", error);
+      res.status(500).json({ error: "Failed to save topic comment" });
+    }
   });
 
   const httpServer = createServer(app);
