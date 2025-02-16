@@ -21,7 +21,7 @@ import {
   episodeTopics,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, ne } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -180,7 +180,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(episodes.groupId, groupId),
-          not(eq(episodes.status, "deleted")) // Don't show deleted episodes
+          ne(episodes.status, "deleted") // Use ne instead of not
         )
       );
   }
@@ -203,6 +203,7 @@ export class DatabaseStorage implements IStorage {
       .from(topics)
       .where(eq(topics.groupId, groupId));
   }
+
   async updateTopic(
     id: number,
     updateData: Partial<InsertTopic> & { isArchived?: boolean; isDeleted?: boolean }
