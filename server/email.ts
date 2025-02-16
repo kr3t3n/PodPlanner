@@ -169,29 +169,58 @@ export async function sendGroupInvitationEmail(
   email: string, 
   groupName: string,
   inviterName: string,
-  inviteToken: string,
+  inviteCode: string,
   inviteUrl: string
 ): Promise<boolean> {
   console.log("Sending group invitation email to:", email);
-  const inviteLink = `${inviteUrl}?token=${inviteToken}`;
 
   return sendEmail({
     to: email,
     subject: `Join ${groupName} on PodPlanner`,
     html: `
-      <h1>You're Invited to Join ${groupName}</h1>
-      <p>${inviterName} has invited you to join their podcast planning group "${groupName}" on PodPlanner.</p>
-      <p>Click the link below to accept the invitation:</p>
-      <p><a href="${inviteLink}">Accept Invitation</a></p>
-      <p>This invitation will expire in 7 days.</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #333; text-align: center;">You're Invited to Join ${groupName}</h1>
+        <div style="background-color: #f9f9f9; padding: 20px; border-radius: 5px;">
+          <p>${inviterName} has invited you to join their podcast planning group "${groupName}" on PodPlanner.</p>
+
+          <div style="margin: 30px 0; text-align: center;">
+            <p style="font-weight: bold; margin-bottom: 10px;">Your Invite Code:</p>
+            <div style="background-color: #eee; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 20px;">
+              ${inviteCode}
+            </div>
+          </div>
+
+          <p>You can join the group in two ways:</p>
+          <ol style="margin-bottom: 20px;">
+            <li>Click the button below to join directly:</li>
+            <div style="text-align: center; margin: 15px 0;">
+              <a href="${inviteUrl}" 
+                style="background-color: #0070f3; color: white; padding: 12px 24px; 
+                        text-decoration: none; border-radius: 5px; display: inline-block;">
+                Join Group
+              </a>
+            </div>
+            <li>Or enter the invite code manually when clicking "Join Group" in PodPlanner</li>
+          </ol>
+
+          <p style="color: #666; font-size: 14px;">
+            This invitation will expire in 7 days.
+          </p>
+        </div>
+      </div>
     `,
     text: `
       You're Invited to Join ${groupName}
 
       ${inviterName} has invited you to join their podcast planning group "${groupName}" on PodPlanner.
 
-      Click the link below to accept the invitation:
-      ${inviteLink}
+      Your Invite Code: ${inviteCode}
+
+      You can join the group in two ways:
+      1. Use this link to join directly:
+         ${inviteUrl}
+
+      2. Or enter the invite code manually when clicking "Join Group" in PodPlanner
 
       This invitation will expire in 7 days.
     `,
