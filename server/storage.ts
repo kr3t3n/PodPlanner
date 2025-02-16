@@ -19,7 +19,7 @@ import {
   topicComments,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -51,7 +51,9 @@ export class DatabaseStorage implements IStorage {
     this.sessionStore = new PostgresSessionStore({
       pool,
       createTableIfMissing: true,
-      tableName: 'user_sessions'  // Use a different table name to avoid conflicts
+      tableName: 'user_sessions',
+      schemaName: 'public',
+      pruneSessionInterval: false
     });
   }
 

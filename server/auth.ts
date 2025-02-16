@@ -42,6 +42,7 @@ export function setupAuth(app: Express) {
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       secure: process.env.NODE_ENV === "production",
     },
+    name: 'podplanner.sid' // Custom session cookie name to avoid conflicts
   };
 
   app.use(session(sessionSettings));
