@@ -15,7 +15,8 @@ export async function initializeTransporter() {
     console.log("Creating SMTP transporter with config:", {
       host: process.env.SMTP_HOST,
       port,
-      secure: port === 465,
+      secure: false,
+      requireTLS: true,
       auth: {
         user: process.env.SMTP_USER
       }
@@ -24,10 +25,14 @@ export async function initializeTransporter() {
     transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port,
-      secure: port === 465, // true for 465, false for other ports
+      secure: false, // false for 587, true for 465
+      requireTLS: true, // Force TLS
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS
+      },
+      tls: {
+        ciphers:'SSLv3'
       }
     });
 
