@@ -325,11 +325,18 @@ export function GroupSettings({ groupId }: { groupId?: number }) {
                         isAdmin: !member.isAdmin,
                       })
                     }
+                    title={member.isAdmin ? "Demote to member" : "Promote to admin"}
                   >
                     {member.isAdmin ? (
-                      <UserMinus className="h-4 w-4" />
+                      <>
+                        <UserMinus className="h-4 w-4 mr-2" />
+                        Demote
+                      </>
                     ) : (
-                      <Shield className="h-4 w-4" />
+                      <>
+                        <Shield className="h-4 w-4 mr-2" />
+                        Make Admin
+                      </>
                     )}
                   </Button>
                 </div>
