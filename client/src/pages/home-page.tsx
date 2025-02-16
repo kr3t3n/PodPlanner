@@ -114,193 +114,169 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen">
-      <header className="border-b">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold">PodPlanner</h1>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">
-              {user?.username}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => logoutMutation.mutate()}
-              disabled={logoutMutation.isPending}
-            >
-              {logoutMutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              Logout
-            </Button>
+    <main className="container mx-auto px-4 py-8">
+      {!groups?.length ? (
+        <div className="flex flex-col items-center justify-center min-h-[400px] space-y-6">
+          <div>
+            <h2 className="text-2xl font-bold text-center">Welcome to PodPlanner</h2>
+            <p className="text-muted-foreground text-center mt-2 max-w-md">
+              Create a new group to start planning your podcast episodes, or join an existing group using an invite code
+            </p>
+          </div>
+          <div className="flex gap-4">
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="lg">Create New Group</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create Group</DialogTitle>
+                </DialogHeader>
+                {/* Add Create Group Form Here */}
+              </DialogContent>
+            </Dialog>
+            <Dialog open={isJoinDialogOpen} onOpenChange={setIsJoinDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="lg">Join Existing Group</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Join Group</DialogTitle>
+                </DialogHeader>
+                <Form {...joinForm}>
+                  <form
+                    onSubmit={joinForm.handleSubmit((data) =>
+                      joinGroupMutation.mutate(data)
+                    )}
+                    className="space-y-4"
+                  >
+                    <FormField
+                      control={joinForm.control}
+                      name="code"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Invite Code</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Enter invite code" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={joinGroupMutation.isPending}
+                    >
+                      {joinGroupMutation.isPending && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      Join Group
+                    </Button>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-8">
-        {!groups?.length ? (
-          <div className="flex flex-col items-center justify-center min-h-[400px] space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold text-center">Welcome to PodPlanner</h2>
-              <p className="text-muted-foreground text-center mt-2 max-w-md">
-                Create a new group to start planning your podcast episodes, or join an existing group using an invite code
-              </p>
-            </div>
-            <div className="flex gap-4">
-              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button size="lg">Create New Group</Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Create Group</DialogTitle>
-                  </DialogHeader>
-                  {/* Add Create Group Form Here */}
-                </DialogContent>
-              </Dialog>
-              <Dialog open={isJoinDialogOpen} onOpenChange={setIsJoinDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="lg">Join Existing Group</Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Join Group</DialogTitle>
-                  </DialogHeader>
-                  <Form {...joinForm}>
-                    <form
-                      onSubmit={joinForm.handleSubmit((data) =>
-                        joinGroupMutation.mutate(data)
-                      )}
-                      className="space-y-4"
-                    >
-                      <FormField
-                        control={joinForm.control}
-                        name="code"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Invite Code</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="Enter invite code" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Button
-                        type="submit"
-                        className="w-full"
-                        disabled={joinGroupMutation.isPending}
-                      >
-                        {joinGroupMutation.isPending && (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        )}
-                        Join Group
-                      </Button>
-                    </form>
-                  </Form>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <div className="flex items-center gap-4">
-              <Select
-                value={selectedGroup?.toString() ?? ""}
-                onValueChange={(value) => setSelectedGroup(Number(value))}
-              >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Select a group" />
-                </SelectTrigger>
-                <SelectContent>
-                  {groups.map((group) => (
-                    <SelectItem
-                      key={group.id}
-                      value={group.id.toString()}
-                    >
-                      {group.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                variant="outline"
-                onClick={() => setSelectedGroup(null)}
-              >
-                Create New Group
+      ) : (
+        <div className="space-y-6">
+          <div className="flex items-center gap-4">
+            <Select
+              value={selectedGroup?.toString() ?? ""}
+              onValueChange={(value) => setSelectedGroup(Number(value))}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Select a group" />
+              </SelectTrigger>
+              <SelectContent>
+                {groups.map((group) => (
+                  <SelectItem
+                    key={group.id}
+                    value={group.id.toString()}
+                  >
+                    {group.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              onClick={() => setSelectedGroup(null)}
+            >
+              Create New Group
+            </Button>
+            <Dialog open={isJoinDialogOpen} onOpenChange={setIsJoinDialogOpen}>
+              <Button variant="outline" onClick={() => setIsJoinDialogOpen(true)}>
+                Join Group
               </Button>
-              <Dialog open={isJoinDialogOpen} onOpenChange={setIsJoinDialogOpen}>
-                <Button variant="outline" onClick={() => setIsJoinDialogOpen(true)}>
-                  Join Group
-                </Button>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Join Group</DialogTitle>
-                  </DialogHeader>
-                  <Form {...joinForm}>
-                    <form
-                      onSubmit={joinForm.handleSubmit((data) =>
-                        joinGroupMutation.mutate(data)
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Join Group</DialogTitle>
+                </DialogHeader>
+                <Form {...joinForm}>
+                  <form
+                    onSubmit={joinForm.handleSubmit((data) =>
+                      joinGroupMutation.mutate(data)
+                    )}
+                    className="space-y-4"
+                  >
+                    <FormField
+                      control={joinForm.control}
+                      name="code"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Invite Code</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Enter invite code" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
                       )}
-                      className="space-y-4"
+                    />
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={joinGroupMutation.isPending}
                     >
-                      <FormField
-                        control={joinForm.control}
-                        name="code"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Invite Code</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="Enter invite code" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Button
-                        type="submit"
-                        className="w-full"
-                        disabled={joinGroupMutation.isPending}
-                      >
-                        {joinGroupMutation.isPending && (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        )}
-                        Join Group
-                      </Button>
-                    </form>
-                  </Form>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            {selectedGroup === null ? (
-              <GroupSettings />
-            ) : (
-              <Tabs defaultValue="calendar" className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <TabsList>
-                    <TabsTrigger value="calendar">Calendar</TabsTrigger>
-                    <TabsTrigger value="topics">Topics</TabsTrigger>
-                    <TabsTrigger value="settings">Settings</TabsTrigger>
-                  </TabsList>
-                </div>
-
-                <TabsContent value="calendar">
-                  <CalendarView groupId={selectedGroup} />
-                </TabsContent>
-
-                <TabsContent value="topics">
-                  <TopicVault groupId={selectedGroup} />
-                </TabsContent>
-
-                <TabsContent value="settings">
-                  <GroupSettings groupId={selectedGroup} />
-                </TabsContent>
-              </Tabs>
-            )}
+                      {joinGroupMutation.isPending && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      Join Group
+                    </Button>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
           </div>
-        )}
-      </main>
-    </div>
+
+          {selectedGroup === null ? (
+            <GroupSettings />
+          ) : (
+            <Tabs defaultValue="calendar" className="space-y-6">
+              <div className="flex justify-between items-center">
+                <TabsList>
+                  <TabsTrigger value="calendar">Calendar</TabsTrigger>
+                  <TabsTrigger value="topics">Topics</TabsTrigger>
+                  <TabsTrigger value="settings">Settings</TabsTrigger>
+                </TabsList>
+              </div>
+
+              <TabsContent value="calendar">
+                <CalendarView groupId={selectedGroup} />
+              </TabsContent>
+
+              <TabsContent value="topics">
+                <TopicVault groupId={selectedGroup} />
+              </TabsContent>
+
+              <TabsContent value="settings">
+                <GroupSettings groupId={selectedGroup} />
+              </TabsContent>
+            </Tabs>
+          )}
+        </div>
+      )}
+    </main>
   );
 }
