@@ -16,7 +16,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Group routes
   app.get("/api/groups", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
+    console.log(`Fetching groups for user ${req.user.id}`);
     const groups = await storage.getUserGroups(req.user.id);
+    console.log('Retrieved groups:', groups);
     res.json(groups);
   });
 
