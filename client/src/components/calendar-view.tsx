@@ -31,8 +31,8 @@ export function CalendarView({ groupId }: { groupId: number | null }) {
         `/api/groups/${groupId}/episodes`,
         {
           title: data.title,
-          // Ensure we send the date in the correct format
-          date: new Date(data.date).toISOString(),
+          groupId,
+          date: data.date.toISOString(),
           status: "draft"
         }
       );
@@ -41,6 +41,7 @@ export function CalendarView({ groupId }: { groupId: number | null }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/groups/${groupId}/episodes`] });
       setIsDialogOpen(false);
+      setSelected(undefined);
     },
   });
 
@@ -93,7 +94,7 @@ export function CalendarView({ groupId }: { groupId: number | null }) {
               <Button 
                 type="submit" 
                 className="w-full"
-                disabled={createEpisodeMutation.isPending}
+                disabled={createEpisodeMutation.isPending || !selected}
               >
                 {createEpisodeMutation.isPending && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

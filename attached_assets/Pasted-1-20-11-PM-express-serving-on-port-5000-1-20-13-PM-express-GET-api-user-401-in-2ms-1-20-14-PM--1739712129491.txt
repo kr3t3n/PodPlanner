@@ -1,0 +1,37 @@
+1:20:11 PM [express] serving on port 5000
+1:20:13 PM [express] GET /api/user 401 in 2ms
+1:20:14 PM [express] GET /api/user 401 in 1ms
+1:20:45 PM [express] POST /api/login 200 in 517ms :: {"id":1,"username":"fordp","password":"c4ad32e6…
+1:20:45 PM [express] GET /api/groups 304 in 154ms :: [{"id":1,"name":"First Group"},{"id":2,"name":"…
+1:20:45 PM [express] GET /api/groups/1/episodes 304 in 147ms :: []
+1:20:51 PM [express] GET /api/groups/1/topics 200 in 149ms :: []
+1:21:23 PM [express] GET /api/groups/1 200 in 274ms :: {"id":1,"name":"First Group"}
+1:21:23 PM [express] GET /api/groups/1/members 200 in 271ms :: [{"id":1,"userId":1,"groupId":1,"isAd…
+/home/runner/workspace/node_modules/src/pg-core/columns/timestamp.ts:66
+        return value.toISOString();
+                     ^
+
+
+TypeError: value.toISOString is not a function
+    at PgTimestamp.mapToDriverValue (/home/runner/workspace/node_modules/src/pg-core/columns/timestamp.ts:66:16)
+    at <anonymous> (/home/runner/workspace/node_modules/src/sql/sql.ts:223:69)
+    at Array.map (<anonymous>)
+    at SQL.buildQueryFromSourceParams (/home/runner/workspace/node_modules/src/sql/sql.ts:148:30)
+    at <anonymous> (/home/runner/workspace/node_modules/src/sql/sql.ts:170:17)
+    at Array.map (<anonymous>)
+    at SQL.buildQueryFromSourceParams (/home/runner/workspace/node_modules/src/sql/sql.ts:148:30)
+    at <anonymous> (/home/runner/workspace/node_modules/src/sql/sql.ts:174:17)
+    at Array.map (<anonymous>)
+    at SQL.buildQueryFromSourceParams (/home/runner/workspace/node_modules/src/sql/sql.ts:148:30)
+    at <anonymous> (/home/runner/workspace/node_modules/src/sql/sql.ts:124:23)
+    at Object.startActiveSpan (/home/runner/workspace/node_modules/src/tracing.ts:27:11)
+    at SQL.toQuery (/home/runner/workspace/node_modules/src/sql/sql.ts:123:17)
+    at PgDialect.sqlToQuery (/home/runner/workspace/node_modules/src/pg-core/dialect.ts:591:14)
+    at <anonymous> (/home/runner/workspace/node_modules/src/pg-core/query-builders/insert.ts:405:19)
+    at Object.startActiveSpan (/home/runner/workspace/node_modules/src/tracing.ts:27:11)
+    at QueryPromise._prepare (/home/runner/workspace/node_modules/src/pg-core/query-builders/insert.ts:400:17)
+    at <anonymous> (/home/runner/workspace/node_modules/src/pg-core/query-builders/insert.ts:422:16)
+    at Object.startActiveSpan (/home/runner/workspace/node_modules/src/tracing.ts:27:11)
+    at QueryPromise.execute (/home/runner/workspace/node_modules/src/pg-core/query-builders/insert.ts:421:17)
+    at QueryPromise.then (/home/runner/workspace/node_modules/src/query-promise.ts:31:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
