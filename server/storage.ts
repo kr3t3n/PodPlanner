@@ -105,10 +105,7 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
-    return result.map(group => ({
-      id: group.id,
-      name: group.name
-    }));
+    return result;
   }
 
   async createGroup(insertGroup: InsertGroup, creatorUserId: number): Promise<Group> {
