@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertTopicSchema, Topic } from "@shared/schema";
-import { Loader2, Archive, Link } from "lucide-react";
+import { Loader2, Archive, Link, Trash2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -44,6 +44,34 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
   const { data: topics, isLoading } = useQuery<Topic[]>({
     queryKey: [`/api/groups/${groupId}/topics`],
     enabled: !!groupId,
+  });
+
+  // Add mutation for updating topic status
+  const updateTopicMutation = useMutation({
+    mutationFn: async ({ id, isArchived, isDeleted }: { id: number; isArchived?: boolean; isDeleted?: boolean }) => {
+      const res = await apiRequest("PATCH", `/api/topics/${id}`, {
+        isArchived,
+        isDeleted,
+      });
+      if (!res.ok) {
+        throw new Error("Failed to update topic");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/groups/${groupId}/topics`] });
+      toast({
+        title: "Topic updated",
+        description: "The topic has been updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to update topic",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const form = useForm<TopicFormData>({
@@ -122,15 +150,26 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
     );
   }
 
+  const handleArchive = (topicId: number, currentlyArchived: boolean) => {
+    updateTopicMutation.mutate({
+      id: topicId,
+      isArchived: !currentlyArchived,
+    });
+  };
+
+  const handleDelete = (topicId: number) => {
+    updateTopicMutation.mutate({
+      id: topicId,
+      isDeleted: true,
+    });
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Topic Vault</h2>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setShowArchived(!showArchived)}
-          >
+          <Button variant="outline" onClick={() => setShowArchived(!showArchived)}>
             {showArchived ? "Show Active" : "Show Archived"}
             <Archive className="ml-2 h-4 w-4" />
           </Button>
@@ -147,40 +186,26 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
                   onSubmit={form.handleSubmit((data) => createTopicMutation.mutate(data))}
                   className="space-y-4"
                 >
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Topic Name (optional if URL is provided)</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="url"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Reference URL (optional if name is provided)</FormLabel>
-                        <FormControl>
-                          <Input {...field} type="url" placeholder="https://" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={createTopicMutation.isPending}
-                  >
-                    {createTopicMutation.isPending && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
+                  <FormField control={form.control} name="name" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Topic Name (optional if URL is provided)</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="url" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Reference URL (optional if name is provided)</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="url" placeholder="https://" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <Button type="submit" className="w-full" disabled={createTopicMutation.isPending}>
+                    {createTopicMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Create Topic
                   </Button>
                 </form>
@@ -192,11 +217,8 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
 
       <ScrollArea className="h-[600px] rounded-md border p-4">
         <div className="space-y-4">
-          {topics?.filter(t => t.isArchived === showArchived && !t.isDeleted).map((topic) => (
-            <div
-              key={topic.id}
-              className="p-4 border rounded-lg space-y-2"
-            >
+          {topics?.filter((t) => t.isArchived === showArchived && !t.isDeleted).map((topic) => (
+            <div key={topic.id} className="p-4 border rounded-lg space-y-2">
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="font-medium">{topic.name}</h3>
@@ -213,6 +235,14 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
                       </a>
                     </div>
                   )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => handleArchive(topic.id, topic.isArchived)}>
+                    <Archive className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => handleDelete(topic.id)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
                 </div>
               </div>
             </div>
