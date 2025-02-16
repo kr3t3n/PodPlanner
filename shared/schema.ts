@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -50,7 +50,9 @@ export const episodeTopics = pgTable("episode_topics", {
   episodeId: integer("episode_id").notNull().references(() => episodes.id),
   topicId: integer("topic_id").notNull().references(() => topics.id),
   order: integer("order").notNull(),
-});
+}, (table) => ({
+  uniqEpisodeTopic: unique().on(table.episodeId, table.topicId),
+}));
 
 export const insertUserSchema = createInsertSchema(users);
 export type InsertUser = z.infer<typeof insertUserSchema>;
