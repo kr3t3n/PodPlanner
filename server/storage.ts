@@ -96,14 +96,12 @@ export class DatabaseStorage implements IStorage {
         id: groups.id,
         name: groups.name,
       })
-      .from(groups)
+      .from(groupMembers)
       .innerJoin(
-        groupMembers,
-        and(
-          eq(groups.id, groupMembers.groupId),
-          eq(groupMembers.userId, userId)
-        )
-      );
+        groups,
+        eq(groups.id, groupMembers.groupId)
+      )
+      .where(eq(groupMembers.userId, userId));
 
     return result;
   }
