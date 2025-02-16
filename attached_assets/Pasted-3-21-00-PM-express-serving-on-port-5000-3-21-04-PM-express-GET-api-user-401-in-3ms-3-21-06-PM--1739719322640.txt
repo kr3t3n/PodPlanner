@@ -1,0 +1,39 @@
+3:21:00 PM [express] serving on port 5000
+3:21:04 PM [express] GET /api/user 401 in 3ms
+3:21:06 PM [express] GET /api/user 304 in 115ms :: {"id":1,"username":"fordp","password":"c4ad32e693…
+3:21:06 PM [express] GET /api/groups 304 in 146ms :: [{"id":1,"name":"First Group"},{"id":2,"name":"…
+3:21:07 PM [express] GET /api/groups/1/episodes 304 in 154ms :: [{"id":3,"groupId":1,"title":"Feb 21…
+3:21:07 PM [express] GET /api/episodes/3/topics 304 in 148ms :: [{"id":2,"groupId":1,"name":"Second …
+3:21:07 PM [express] GET /api/episodes/4/topics 304 in 153ms :: [{"id":3,"groupId":1,"name":"","url"…
+3:21:07 PM [express] GET /api/user 304 in 113ms :: {"id":1,"username":"fordp","password":"c4ad32e693…
+3:21:07 PM [express] GET /api/groups 304 in 147ms :: [{"id":1,"name":"First Group"},{"id":2,"name":"…
+3:21:08 PM [express] GET /api/groups/1/episodes 304 in 147ms :: [{"id":3,"groupId":1,"title":"Feb 21…
+3:21:08 PM [express] GET /api/episodes/4/topics 304 in 151ms :: [{"id":3,"groupId":1,"name":"","url"…
+3:21:08 PM [express] GET /api/episodes/3/topics 304 in 151ms :: [{"id":2,"groupId":1,"name":"Second …
+3:21:24 PM [express] GET /api/groups/1/topics 304 in 263ms :: [{"id":2,"groupId":1,"name":"Second to…
+3:21:25 PM [express] GET /api/topics/2/comments 200 in 165ms :: []
+Error saving topic comment: error: there is no unique or exclusion constraint matching the ON CONFLICT specification
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.upsertTopicComment (/home/runner/workspace/server/storage.ts:296:23)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:147:23) {
+  length: 148,
+  severity: 'ERROR',
+  code: '42P10',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'plancat.c',
+  line: '915',
+  routine: 'infer_arbiter_indexes'
+}
+3:21:33 PM [express] POST /api/topics/2/comments 500 in 305ms :: {"error":"Failed to save topic comm…
