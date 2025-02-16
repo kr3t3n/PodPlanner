@@ -101,21 +101,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Routes for topic-episode associations
   app.post("/api/episodes/:episodeId/topics/:topicId", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
-    await storage.addTopicToEpisode(
-      parseInt(req.params.episodeId),
-      parseInt(req.params.topicId),
-      req.body.order
-    );
-    res.json({ success: true });
+    try {
+      await storage.addTopicToEpisode(
+        parseInt(req.params.episodeId),
+        parseInt(req.params.topicId),
+        req.body.order
+      );
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error adding topic to episode:", error);
+      res.status(500).json({ error: "Failed to add topic to episode" });
+    }
   });
 
   app.delete("/api/episodes/:episodeId/topics/:topicId", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
-    await storage.removeTopicFromEpisode(
-      parseInt(req.params.episodeId),
-      parseInt(req.params.topicId)
-    );
-    res.json({ success: true });
+    try {
+      await storage.removeTopicFromEpisode(
+        parseInt(req.params.episodeId),
+        parseInt(req.params.topicId)
+      );
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing topic from episode:", error);
+      res.status(500).json({ error: "Failed to remove topic from episode" });
+    }
   });
 
   app.get("/api/episodes/:id/topics", async (req, res) => {

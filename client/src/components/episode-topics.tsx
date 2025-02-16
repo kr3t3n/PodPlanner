@@ -13,6 +13,75 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, GripVertical, X } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+interface TopicItemProps {
+  topic: Topic & { order: number };
+  onRemove: (id: number) => void;
+}
+
+function TopicItem({ topic, onRemove }: TopicItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: topic.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 1 : 0,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-2 p-3 border rounded-lg group ${
+        isDragging ? "opacity-50" : ""
+      }`}
+      {...attributes}
+    >
+      <div {...listeners} className="cursor-grab active:cursor-grabbing">
+        <GripVertical className="h-5 w-5 text-muted-foreground" />
+      </div>
+      <div className="flex-1">
+        <h4 className="font-medium">{topic.name}</h4>
+        {topic.url && (
+          <p className="text-sm text-muted-foreground truncate">
+            {topic.url}
+          </p>
+        )}
+      </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => onRemove(topic.id)}
+      >
+        <X className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
 
 interface EpisodeTopicsProps {
   episodeId: number;
@@ -22,8 +91,16 @@ interface EpisodeTopicsProps {
 export function EpisodeTopics({ episodeId, groupId }: EpisodeTopicsProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
-  const { data: episodeTopics, isLoading: isLoadingEpisodeTopics } = useQuery<(Topic & { order: number })[]>({
+  const { data: episodeTopics, isLoading: isLoadingEpisodeTopics } = useQuery<
+    (Topic & { order: number })[]
+  >({
     queryKey: [`/api/episodes/${episodeId}/topics`],
     enabled: !!episodeId,
   });
@@ -68,6 +145,7 @@ export function EpisodeTopics({ episodeId, groupId }: EpisodeTopicsProps) {
         `/api/episodes/${episodeId}/topics/${topicId}`
       );
       if (!res.ok) throw new Error("Failed to remove topic from episode");
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/episodes/${episodeId}/topics`] });
@@ -84,6 +162,64 @@ export function EpisodeTopics({ episodeId, groupId }: EpisodeTopicsProps) {
       });
     },
   });
+
+  const reorderTopicsMutation = useMutation({
+    mutationFn: async (topics: { id: number; order: number }[]) => {
+      try {
+        const updates = topics.map(({ id, order }) =>
+          apiRequest(
+            "POST",
+            `/api/episodes/${episodeId}/topics/${id}`,
+            { order }
+          ).then(res => {
+            if (!res.ok) throw new Error(`Failed to update topic ${id}`);
+            return res.json();
+          })
+        );
+        await Promise.all(updates);
+      } catch (error) {
+        console.error("Error reordering topics:", error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/episodes/${episodeId}/topics`] });
+      toast({
+        title: "Topics reordered",
+        description: "The topics have been reordered successfully",
+      });
+    },
+    onError: (error: Error) => {
+      console.error("Mutation error:", error);
+      toast({
+        title: "Failed to reorder topics",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id || !episodeTopics) return;
+
+    const oldIndex = episodeTopics.findIndex((t) => t.id === active.id);
+    const newIndex = episodeTopics.findIndex((t) => t.id === over.id);
+
+    const newOrder = arrayMove(episodeTopics, oldIndex, newIndex).map(
+      (topic, index) => ({
+        id: topic.id,
+        order: index,
+      })
+    );
+
+    reorderTopicsMutation.mutate(newOrder);
+  };
+
+  if (!episodeId) {
+    return <div>Please select an episode first</div>;
+  }
 
   if (isLoadingEpisodeTopics) {
     return (
@@ -141,29 +277,24 @@ export function EpisodeTopics({ episodeId, groupId }: EpisodeTopicsProps) {
       </div>
 
       <div className="space-y-2">
-        {episodeTopics?.map((topic) => (
-          <div
-            key={topic.id}
-            className="flex items-center gap-2 p-3 border rounded-lg group"
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={episodeTopics?.map((t) => t.id) ?? []}
+            strategy={verticalListSortingStrategy}
           >
-            <GripVertical className="h-5 w-5 text-muted-foreground cursor-move" />
-            <div className="flex-1">
-              <h4 className="font-medium">{topic.name}</h4>
-              {topic.url && (
-                <p className="text-sm text-muted-foreground truncate">
-                  {topic.url}
-                </p>
-              )}
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => removeTopicMutation.mutate(topic.id)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        ))}
+            {episodeTopics?.map((topic) => (
+              <TopicItem
+                key={topic.id}
+                topic={topic}
+                onRemove={() => removeTopicMutation.mutate(topic.id)}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
       </div>
     </div>
   );
