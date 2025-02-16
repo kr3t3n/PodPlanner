@@ -17,15 +17,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertTopicSchema, Topic, TopicComment } from "@shared/schema";
+import { insertTopicSchema, Topic } from "@shared/schema";
 import { Loader2, Archive, Trash2, Link } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 
 export function TopicVault({ groupId }: { groupId: number | null }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -47,14 +45,19 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
 
   const createTopicMutation = useMutation({
     mutationFn: async (data: { name?: string; url?: string }) => {
+      // If there's no name but there is a URL, use URL as the name
+      const payload = {
+        ...data,
+        name: data.name || data.url,
+        groupId
+      };
+
       const res = await apiRequest(
         "POST",
         `/api/groups/${groupId}/topics`,
-        {
-          ...data,
-          groupId
-        }
+        payload
       );
+
       if (!res.ok) {
         const error = await res.text();
         throw new Error(error);
@@ -123,7 +126,7 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
     );
   }
 
-  const onSubmit = (data: { name?: string; url?: string }) => {
+  const handleSubmit = (data: { name?: string; url?: string }) => {
     createTopicMutation.mutate(data);
   };
 
@@ -149,7 +152,7 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
               </DialogHeader>
               <Form {...form}>
                 <form
-                  onSubmit={form.handleSubmit(onSubmit)}
+                  onSubmit={form.handleSubmit(handleSubmit)}
                   className="space-y-4"
                 >
                   <FormField
@@ -159,7 +162,7 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
                       <FormItem>
                         <FormLabel>Topic Name</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} placeholder="Enter topic name" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -170,9 +173,9 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
                     name="url"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Reference URL (optional)</FormLabel>
+                        <FormLabel>Reference URL (optional if name provided)</FormLabel>
                         <FormControl>
-                          <Input {...field} type="url" />
+                          <Input {...field} type="url" placeholder="https://..." />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

@@ -71,7 +71,13 @@ export type Episode = typeof episodes.$inferSelect;
 export const insertTopicSchema = createInsertSchema(topics).extend({
   name: z.string().min(1, "Name is required").optional(),
   url: z.string().url("Must be a valid URL").optional(),
-}).refine((data) => data.name || data.url, {
+}).refine((data) => {
+  // Either name or URL must be provided
+  if (!data.name && !data.url) {
+    return false;
+  }
+  return true;
+}, {
   message: "Either name or URL must be provided",
 });
 export type InsertTopic = z.infer<typeof insertTopicSchema>;
