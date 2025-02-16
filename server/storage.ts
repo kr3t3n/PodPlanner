@@ -74,12 +74,9 @@ export class DatabaseStorage implements IStorage {
 
   async getUserGroups(userId: number): Promise<Group[]> {
     return await db
-      .select({
-        id: groups.id,
-        name: groups.name,
-      })
+      .select()
       .from(groupMembers)
-      .innerJoin(groups, eq(groups.id, groupMembers.groupId))
+      .innerJoin(groups, eq(groupMembers.groupId, groups.id))
       .where(eq(groupMembers.userId, userId));
   }
 

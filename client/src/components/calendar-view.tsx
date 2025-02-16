@@ -30,8 +30,10 @@ export function CalendarView({ groupId }: { groupId: number | null }) {
         "POST",
         `/api/groups/${groupId}/episodes`,
         {
-          ...data,
-          date: data.date.toISOString(), // Convert date to ISO string
+          title: data.title,
+          // Ensure we send the date in the correct format
+          date: new Date(data.date).toISOString(),
+          status: "draft"
         }
       );
       return res.json();
@@ -88,7 +90,14 @@ export function CalendarView({ groupId }: { groupId: number | null }) {
                 onSelect={setSelected}
                 className="rounded-md border"
               />
-              <Button type="submit" className="w-full">
+              <Button 
+                type="submit" 
+                className="w-full"
+                disabled={createEpisodeMutation.isPending}
+              >
+                {createEpisodeMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
                 Create Episode
               </Button>
             </form>

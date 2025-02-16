@@ -24,7 +24,7 @@ export const episodes = pgTable("episodes", {
   id: serial("id").primaryKey(),
   groupId: integer("group_id").notNull().references(() => groups.id),
   title: text("title").notNull(),
-  date: timestamp("date").notNull(),
+  date: timestamp("date", { mode: 'date' }).notNull(),
   status: text("status").notNull().default("draft"),
   repeatPattern: json("repeat_pattern"),
 });
