@@ -70,7 +70,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await apiRequest("POST", "/api/logout");
     },
     onSuccess: () => {
+      // Clear both user and groups data from the cache
       queryClient.setQueryData(["/api/user"], null);
+      queryClient.invalidateQueries({ queryKey: ["/api/groups"] });
+      queryClient.removeQueries({ queryKey: ["/api/groups"] });
     },
     onError: (error: Error) => {
       toast({
