@@ -5,8 +5,26 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
-  email: text("email"),  // Temporarily optional during migration
+  email: text("email").notNull(),  // Making email required now
   password: text("password").notNull(),
+});
+
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  token: text("token").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").notNull().default(false),
+});
+
+export const groupInvitations = pgTable("group_invitations", {
+  id: serial("id").primaryKey(),
+  groupId: integer("group_id").notNull().references(() => groups.id),
+  email: text("email").notNull(),
+  token: text("token").notNull(),
+  invitedBy: integer("invited_by").notNull().references(() => users.id),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").notNull().default(false),
 });
 
 export const groups = pgTable("groups", {
@@ -58,9 +76,19 @@ export const episodeTopics = pgTable("episode_topics", {
   uniqEpisodeTopic: unique().on(table.episodeId, table.topicId),
 }));
 
-export const insertUserSchema = createInsertSchema(users);
+export const insertUserSchema = createInsertSchema(users).extend({
+  email: z.string().email("Invalid email address"),
+});
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTokens);
+export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+
+export const insertGroupInvitationSchema = createInsertSchema(groupInvitations);
+export type InsertGroupInvitation = z.infer<typeof insertGroupInvitationSchema>;
+export type GroupInvitation = typeof groupInvitations.$inferSelect;
 
 export const insertGroupSchema = createInsertSchema(groups);
 export type InsertGroup = z.infer<typeof insertGroupSchema>;

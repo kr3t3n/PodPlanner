@@ -12,6 +12,10 @@ import {
   type TopicComment,
   type InsertTopicComment,
   type EpisodeTopic,
+  type PasswordResetToken,
+  type InsertPasswordResetToken,
+  type GroupInvitation,
+  type InsertGroupInvitation,
   users,
   groups,
   groupMembers,
@@ -19,9 +23,11 @@ import {
   topics,
   topicComments,
   episodeTopics,
+  passwordResetTokens,
+  groupInvitations,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, ne } from "drizzle-orm";
+import { eq, and, ne, gt } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -32,7 +38,9 @@ export interface IStorage {
   sessionStore: session.Store;
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, data: Partial<InsertUser>): Promise<User>;
   getUserGroups(userId: number): Promise<Group[]>;
   createGroup(group: InsertGroup, creatorUserId: number): Promise<Group>;
   getGroup(id: number): Promise<Group | undefined>;
@@ -55,6 +63,14 @@ export interface IStorage {
   addTopicToEpisode(episodeId: number, topicId: number, order: number): Promise<void>;
   removeTopicFromEpisode(episodeId: number, topicId: number): Promise<void>;
   upsertTopicComment(comment: InsertTopicComment): Promise<TopicComment>;
+
+  createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken>;
+  getValidPasswordResetToken(token: string): Promise<PasswordResetToken | undefined>;
+  markPasswordResetTokenAsUsed(id: number): Promise<void>;
+
+  createGroupInvitation(invitation: InsertGroupInvitation): Promise<GroupInvitation>;
+  getValidGroupInvitation(token: string): Promise<(GroupInvitation & { group: Group }) | undefined>;
+  markGroupInvitationAsUsed(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -66,9 +82,9 @@ export class DatabaseStorage implements IStorage {
       createTableIfMissing: true,
       tableName: 'user_sessions',
       schemaName: 'public',
-      pruneSessionInterval: false, // Disable automatic pruning
-      errorLog: console.error.bind(console), // Add error logging
-      connectionString: process.env.DATABASE_URL // Explicitly set connection string
+      pruneSessionInterval: false,
+      errorLog: console.error.bind(console),
+      connectionString: process.env.DATABASE_URL
     });
   }
 
@@ -151,7 +167,7 @@ export class DatabaseStorage implements IStorage {
       .insert(episodes)
       .values({
         ...insertEpisode,
-        date: new Date(insertEpisode.date), // Convert string date to Date object
+        date: new Date(insertEpisode.date),
         status: insertEpisode.status || "draft",
         repeatPattern: insertEpisode.repeatPattern || null,
       })
@@ -187,7 +203,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(episodes.groupId, groupId),
-          ne(episodes.status, "deleted") // Use ne instead of not
+          ne(episodes.status, "deleted")
         )
       );
   }
@@ -313,6 +329,91 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return comment;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email));
+    return user;
+  }
+
+  async updateUser(id: number, data: Partial<InsertUser>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set(data)
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken> {
+    const [resetToken] = await db
+      .insert(passwordResetTokens)
+      .values(token)
+      .returning();
+    return resetToken;
+  }
+
+  async getValidPasswordResetToken(token: string): Promise<PasswordResetToken | undefined> {
+    const [resetToken] = await db
+      .select()
+      .from(passwordResetTokens)
+      .where(
+        and(
+          eq(passwordResetTokens.token, token),
+          eq(passwordResetTokens.used, false),
+          gt(passwordResetTokens.expiresAt, new Date())
+        )
+      );
+    return resetToken;
+  }
+
+  async markPasswordResetTokenAsUsed(id: number): Promise<void> {
+    await db
+      .update(passwordResetTokens)
+      .set({ used: true })
+      .where(eq(passwordResetTokens.id, id));
+  }
+
+  async createGroupInvitation(invitation: InsertGroupInvitation): Promise<GroupInvitation> {
+    const [groupInvitation] = await db
+      .insert(groupInvitations)
+      .values(invitation)
+      .returning();
+    return groupInvitation;
+  }
+
+  async getValidGroupInvitation(token: string): Promise<(GroupInvitation & { group: Group }) | undefined> {
+    const [invitation] = await db
+      .select({
+        id: groupInvitations.id,
+        groupId: groupInvitations.groupId,
+        email: groupInvitations.email,
+        token: groupInvitations.token,
+        invitedBy: groupInvitations.invitedBy,
+        expiresAt: groupInvitations.expiresAt,
+        used: groupInvitations.used,
+        group: groups,
+      })
+      .from(groupInvitations)
+      .innerJoin(groups, eq(groups.id, groupInvitations.groupId))
+      .where(
+        and(
+          eq(groupInvitations.token, token),
+          eq(groupInvitations.used, false),
+          gt(groupInvitations.expiresAt, new Date())
+        )
+      );
+    return invitation;
+  }
+
+  async markGroupInvitationAsUsed(id: number): Promise<void> {
+    await db
+      .update(groupInvitations)
+      .set({ used: true })
+      .where(eq(groupInvitations.id, id));
   }
 }
 

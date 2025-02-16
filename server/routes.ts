@@ -9,9 +9,104 @@ import {
   insertTopicCommentSchema,
   insertEpisodeSchema,
 } from "@shared/schema";
+import { randomBytes } from "crypto";
+import { addHours, addDays } from "date-fns";
+import {
+  sendPasswordResetEmail,
+  sendGroupInvitationEmail,
+  sendGroupActivityEmail
+} from "./email";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
+
+  // Password Reset Routes
+  app.post("/api/forgot-password", async (req, res) => {
+    const { email } = req.body;
+    const user = await storage.getUserByEmail(email);
+    if (!user) {
+      // Don't reveal if email exists
+      return res.sendStatus(200);
+    }
+
+    const token = randomBytes(32).toString("hex");
+    await storage.createPasswordResetToken({
+      userId: user.id,
+      token,
+      expiresAt: addHours(new Date(), 1),
+      used: false,
+    });
+
+    const resetUrl = `${req.protocol}://${req.get("host")}/reset-password`;
+    await sendPasswordResetEmail(email, token, resetUrl);
+    res.sendStatus(200);
+  });
+
+  app.post("/api/reset-password", async (req, res) => {
+    const { token, password } = req.body;
+    const resetToken = await storage.getValidPasswordResetToken(token);
+    if (!resetToken) {
+      return res.status(400).send("Invalid or expired token");
+    }
+
+    // Update password and mark token as used
+    await storage.updateUser(resetToken.userId, { password });
+    await storage.markPasswordResetTokenAsUsed(resetToken.id);
+    res.sendStatus(200);
+  });
+
+  // Group Invitation Routes
+  app.post("/api/groups/:id/invite", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const { email } = req.body;
+    const groupId = parseInt(req.params.id);
+
+    const group = await storage.getGroup(groupId);
+    if (!group) return res.sendStatus(404);
+
+    // Generate invitation token
+    const token = randomBytes(32).toString("hex");
+    const invitation = await storage.createGroupInvitation({
+      groupId,
+      email,
+      token,
+      invitedBy: req.user.id,
+      expiresAt: addDays(new Date(), 7),
+      used: false,
+    });
+
+    const inviteUrl = `${req.protocol}://${req.get("host")}/join-group`;
+    await sendGroupInvitationEmail(
+      email,
+      group.name,
+      req.user.username,
+      token,
+      inviteUrl
+    );
+
+    res.json(invitation);
+  });
+
+  app.post("/api/accept-invitation", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const { token } = req.body;
+
+    const invitation = await storage.getValidGroupInvitation(token);
+    if (!invitation) {
+      return res.status(400).send("Invalid or expired invitation");
+    }
+
+    // Add user to group
+    await storage.addGroupMember({
+      userId: req.user.id,
+      groupId: invitation.groupId,
+      isAdmin: false,
+    });
+
+    // Mark invitation as used
+    await storage.markGroupInvitationAsUsed(invitation.id);
+    res.json(invitation.group);
+  });
 
   // Group routes
   app.get("/api/groups", async (req, res) => {
