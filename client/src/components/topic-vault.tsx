@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -28,7 +27,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { z } from "zod";
 
 // Create a custom schema without groupId for the form
-const topicFormSchema = insertTopicSchema.omit({ groupId: true });
+const topicFormSchema = z.object({
+  name: z.string().optional(),
+  url: z.string().url("Must be a valid URL").optional(),
+}).refine((data) => data.name || data.url, {
+  message: "Either name or URL must be provided",
+});
+
 type TopicFormData = z.infer<typeof topicFormSchema>;
 
 export function TopicVault({ groupId }: { groupId: number | null }) {
@@ -133,9 +138,6 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Add New Topic</DialogTitle>
-                <DialogDescription>
-                  Create a new topic for your podcast. Add a name and optionally a reference URL.
-                </DialogDescription>
               </DialogHeader>
               <Form {...form}>
                 <form
@@ -147,7 +149,7 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Topic Name</FormLabel>
+                        <FormLabel>Topic Name (optional if URL is provided)</FormLabel>
                         <FormControl>
                           <Input {...field} />
                         </FormControl>
@@ -160,7 +162,7 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
                     name="url"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Reference URL (optional)</FormLabel>
+                        <FormLabel>Reference URL (optional if name is provided)</FormLabel>
                         <FormControl>
                           <Input {...field} type="url" placeholder="https://" />
                         </FormControl>
