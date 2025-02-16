@@ -34,7 +34,7 @@ export default function HomePage() {
     if (groups?.length && !selectedGroup) {
       setSelectedGroup(groups[0].id);
     }
-  }, [groups]);
+  }, [groups, selectedGroup]);
 
   if (isGroupsLoading) {
     return (
@@ -75,7 +75,7 @@ export default function HomePage() {
           <div className="space-y-6">
             <div className="flex items-center gap-4">
               <Select
-                value={selectedGroup?.toString()}
+                value={selectedGroup?.toString() || ""}
                 onValueChange={(value) => setSelectedGroup(parseInt(value))}
               >
                 <SelectTrigger className="w-[200px]">
@@ -83,7 +83,10 @@ export default function HomePage() {
                 </SelectTrigger>
                 <SelectContent>
                   {groups.map((group) => (
-                    <SelectItem key={group.id} value={group.id.toString()}>
+                    <SelectItem 
+                      key={group.id} 
+                      value={group.id.toString()}
+                    >
                       {group.name}
                     </SelectItem>
                   ))}
