@@ -25,12 +25,45 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/hooks/use-auth";
+import * as z from 'zod';
 
 export function GroupSettings({ groupId }: { groupId?: number }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+
+  const inviteForm = useForm({
+    defaultValues: {
+      email: "",
+    },
+    resolver: zodResolver(z.object({
+      email: z.string().email("Invalid email address"),
+    })),
+  });
+
+  const inviteMutation = useMutation({
+    mutationFn: async (data: { email: string }) => {
+      const res = await apiRequest("POST", `/api/groups/${groupId}/invite`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      setIsInviteDialogOpen(false);
+      inviteForm.reset();
+      toast({
+        title: "Invitation sent",
+        description: "An invitation email has been sent to the user",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to send invitation",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const { data: group } = useQuery<Group>({
     queryKey: [`/api/groups/${groupId}`],
@@ -278,10 +311,51 @@ export function GroupSettings({ groupId }: { groupId?: number }) {
 
       {isAdmin && (
         <div className="flex justify-end">
-          <Button>
-            <UserPlus className="h-4 w-4 mr-2" />
-            Invite Member
-          </Button>
+          <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Invite Member
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Invite New Member</DialogTitle>
+              </DialogHeader>
+              <Form {...inviteForm}>
+                <form
+                  onSubmit={inviteForm.handleSubmit((data) =>
+                    inviteMutation.mutate(data)
+                  )}
+                  className="space-y-4"
+                >
+                  <FormField
+                    control={inviteForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email Address</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="email" placeholder="Enter email address" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={inviteMutation.isPending}
+                  >
+                    {inviteMutation.isPending && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Send Invitation
+                  </Button>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
         </div>
       )}
     </div>
