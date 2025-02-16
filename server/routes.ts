@@ -77,14 +77,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/forgot-password", async (req, res) => {
     console.log("Received forgot password request for email:", req.body.email);
     const { email } = req.body;
-    const user = await storage.getUserByEmail(email);
-    if (!user) {
-      console.log("No user found with email:", email);
-      // Don't reveal if email exists
-      return res.sendStatus(200);
-    }
 
     try {
+      console.log("Looking up user by email:", email);
+      const user = await storage.getUserByEmail(email);
+      console.log('User lookup result:', user ? `Found user with ID ${user.id}` : 'No user found');
+
+      if (!user) {
+        // Don't reveal if email exists
+        return res.sendStatus(200);
+      }
+
       console.log("Generating reset token for user:", user.id);
       const token = randomBytes(32).toString("hex");
       await storage.createPasswordResetToken({
@@ -94,7 +97,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         used: false,
       });
 
-      const resetUrl = `${req.protocol}://${req.get("host")}/reset-password`;
+      // Get the base URL from request headers
+      const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+      const host = req.headers['x-forwarded-host'] || req.get('host');
+      const resetUrl = `${protocol}://${host}/reset-password`;
+      console.log("Constructed reset URL:", resetUrl);
+
       console.log("Sending password reset email with URL:", resetUrl);
       const emailSent = await sendPasswordResetEmail(email, token, resetUrl);
 
