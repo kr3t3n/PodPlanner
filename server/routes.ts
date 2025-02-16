@@ -14,31 +14,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
 
   // Group routes
+  app.get("/api/groups", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+    const groups = await storage.getUserGroups(req.user.id);
+    res.json(groups);
+  });
+
   app.post("/api/groups", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
     const group = await storage.createGroup({
       name: req.body.name,
     });
     await storage.addGroupMember({
       groupId: group.id,
-      userId: req.user!.id,
+      userId: req.user.id,
       isAdmin: true,
     });
     res.json(group);
   });
 
   app.get("/api/groups/:id", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
     const group = await storage.getGroup(parseInt(req.params.id));
     if (!group) return res.sendStatus(404);
     res.json(group);
   });
 
   app.get("/api/groups/:id/members", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
     const members = await storage.getGroupMembers(parseInt(req.params.id));
     res.json(members);
   });
 
   // Episode routes
   app.post("/api/groups/:id/episodes", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
     const episode = await storage.createEpisode({
       groupId: parseInt(req.params.id),
       ...req.body,
@@ -47,12 +57,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/groups/:id/episodes", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
     const episodes = await storage.getGroupEpisodes(parseInt(req.params.id));
     res.json(episodes);
   });
 
   // Topic routes
   app.post("/api/groups/:id/topics", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
     const topic = await storage.createTopic({
       groupId: parseInt(req.params.id),
       ...req.body,
@@ -61,15 +73,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.get("/api/groups/:id/topics", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
     const topics = await storage.getGroupTopics(parseInt(req.params.id));
     res.json(topics);
   });
 
   // Topic comment routes
   app.post("/api/topics/:id/comments", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
     const comment = await storage.createTopicComment({
       topicId: parseInt(req.params.id),
-      userId: req.user!.id,
+      userId: req.user.id,
       content: req.body.content,
     });
     res.json(comment);

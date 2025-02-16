@@ -19,7 +19,7 @@ import {
   topicComments,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -31,10 +31,11 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  getUserGroups(userId: number): Promise<Group[]>;
   createGroup(group: InsertGroup): Promise<Group>;
   getGroup(id: number): Promise<Group | undefined>;
   addGroupMember(member: InsertGroupMember): Promise<GroupMember>;
-  getGroupMembers(groupId: number): Promise<GroupMember[]>;
+  getGroupMembers(groupId: number): Promise<(GroupMember & { user: User })[]>;
   createEpisode(episode: InsertEpisode): Promise<Episode>;
   getGroupEpisodes(groupId: number): Promise<Episode[]>;
   createTopic(topic: InsertTopic): Promise<Topic>;
@@ -71,6 +72,17 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async getUserGroups(userId: number): Promise<Group[]> {
+    return await db
+      .select({
+        id: groups.id,
+        name: groups.name,
+      })
+      .from(groupMembers)
+      .innerJoin(groups, eq(groups.id, groupMembers.groupId))
+      .where(eq(groupMembers.userId, userId));
+  }
+
   async createGroup(insertGroup: InsertGroup): Promise<Group> {
     const [group] = await db.insert(groups).values(insertGroup).returning();
     return group;
@@ -89,10 +101,17 @@ export class DatabaseStorage implements IStorage {
     return member;
   }
 
-  async getGroupMembers(groupId: number): Promise<GroupMember[]> {
+  async getGroupMembers(groupId: number): Promise<(GroupMember & { user: User })[]> {
     return await db
-      .select()
+      .select({
+        id: groupMembers.id,
+        userId: groupMembers.userId,
+        groupId: groupMembers.groupId,
+        isAdmin: groupMembers.isAdmin,
+        user: users,
+      })
       .from(groupMembers)
+      .innerJoin(users, eq(groupMembers.userId, users.id))
       .where(eq(groupMembers.groupId, groupId));
   }
 
