@@ -8,6 +8,10 @@ import AuthPage from "@/pages/auth-page";
 import HomePage from "@/pages/home-page";
 import JoinGroupPage from "@/pages/join-group-page";
 import ResetPasswordPage from "@/pages/reset-password-page";
+import TermsPage from "@/pages/terms-page";
+import PrivacyPage from "@/pages/privacy-page";
+import ContactPage from "@/pages/contact-page";
+import { Footer } from "@/components/ui/footer";
 import { ProtectedRoute } from "@/lib/protected-route";
 
 function Router() {
@@ -17,6 +21,9 @@ function Router() {
       <Route path="/auth" component={AuthPage} />
       <Route path="/join-group" component={JoinGroupPage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
+      <Route path="/terms" component={TermsPage} />
+      <Route path="/privacy" component={PrivacyPage} />
+      <Route path="/contact" component={ContactPage} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -26,7 +33,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Router />
+        <div className="min-h-screen flex flex-col">
+          <Router />
+          <Footer />
+        </div>
         <Toaster />
       </AuthProvider>
     </QueryClientProvider>
