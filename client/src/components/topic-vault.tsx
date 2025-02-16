@@ -21,15 +21,10 @@ import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertTopicSchema, Topic } from "@shared/schema";
-import { Loader2, Archive, Trash2, Link } from "lucide-react";
+import { Loader2, Archive, Link } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
-type TopicFormData = {
-  name: string;
-  url: string;
-};
 
 export function TopicVault({ groupId }: { groupId: number | null }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -41,7 +36,7 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
     enabled: !!groupId,
   });
 
-  const form = useForm<TopicFormData>({
+  const form = useForm({
     resolver: zodResolver(insertTopicSchema),
     defaultValues: {
       name: "",
@@ -50,43 +45,19 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
   });
 
   const createTopicMutation = useMutation({
-    mutationFn: async (data: TopicFormData) => {
-      console.log("Starting topic creation with data:", data);
-
-      if (!groupId) {
-        console.error("No group selected");
-        throw new Error("No group selected");
-      }
-
-      // Clean the data before sending
-      const payload = {
-        name: data.name,
-        url: data.url || undefined,
+    mutationFn: async (data: { name: string; url?: string }) => {
+      if (!groupId) throw new Error("No group selected");
+      const res = await apiRequest("POST", `/api/groups/${groupId}/topics`, {
+        ...data,
         groupId,
-      };
-
-      console.log("Sending payload:", payload);
-
-      try {
-        const res = await apiRequest("POST", `/api/groups/${groupId}/topics`, payload);
-        console.log("API Response status:", res.status);
-
-        if (!res.ok) {
-          const errorText = await res.text();
-          console.error("API Error:", errorText);
-          throw new Error(errorText || "Failed to create topic");
-        }
-
-        const result = await res.json();
-        console.log("API Success response:", result);
-        return result;
-      } catch (error) {
-        console.error("API Call error:", error);
-        throw error;
+      });
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "Failed to create topic");
       }
+      return res.json();
     },
-    onSuccess: (data) => {
-      console.log("Mutation succeeded:", data);
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/groups/${groupId}/topics`] });
       setIsDialogOpen(false);
       form.reset();
@@ -96,7 +67,6 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
       });
     },
     onError: (error: Error) => {
-      console.error("Mutation failed:", error);
       toast({
         title: "Failed to create topic",
         description: error.message,
@@ -104,15 +74,6 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
       });
     },
   });
-
-  const onSubmit = async (data: TopicFormData) => {
-    console.log("Form submitted with data:", data);
-    try {
-      await createTopicMutation.mutateAsync(data);
-    } catch (error) {
-      console.error("Form submission error:", error);
-    }
-  };
 
   if (!groupId) {
     return <div>Please select a group first</div>;
@@ -151,12 +112,7 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
               </DialogHeader>
               <Form {...form}>
                 <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    console.log("Form submit event triggered");
-                    const result = form.handleSubmit(onSubmit)(e);
-                    console.log("Form handle submit result:", result);
-                  }}
+                  onSubmit={form.handleSubmit((data) => createTopicMutation.mutate(data))}
                   className="space-y-4"
                 >
                   <FormField
@@ -223,22 +179,6 @@ export function TopicVault({ groupId }: { groupId: number | null }) {
                       Reference Link
                     </a>
                   )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => archiveTopicMutation.mutate(topic.id)}
-                  >
-                    <Archive className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => deleteTopicMutation.mutate(topic.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
                 </div>
               </div>
             </div>
