@@ -160,7 +160,21 @@ export function GroupSettings({ groupId }: { groupId?: number }) {
       return res.json();
     },
     onSuccess: () => {
+      // Invalidate both the members list and the group queries to ensure UI updates
       queryClient.invalidateQueries({ queryKey: [`/api/groups/${groupId}/members`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/groups/${groupId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/groups"] });
+      toast({
+        title: "Member role updated",
+        description: "The member's role has been updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to update member role",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
